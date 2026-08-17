@@ -1,0 +1,13 @@
+# Core CV
+ultralytics>=8.2          # YOLO + built-in ByteTrack/BoT-SORT
+opencv-python-headless>=4.9
+av>=12.0                  # PyAV: real per-frame PTS extraction
+lapx>=0.5                 # assignment solver used by trackers
+
+# torch: install the CPU build explicitly to avoid multi-GB CUDA wheels:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+
+pyyaml>=6.0
+pytest>=8.0

@@ -1,0 +1,17 @@
+# Per-camera configuration (tech plan v2 §4).
+# This is the synthetic test camera; calibration is filled in Milestone 2.
+camera_id: synthetic_cam_001
+video:
+  expected_resolution: [1280, 720]
+calibration:
+  method: manual_homography
+  image_points: []        # >= 4 reference points, filled at calibration time
+  ground_points_m: []
+  homography: null
+  reprojection_error_m: null
+  validity_mask: null     # polygon (image coords) where calibration error is bounded
+  ground_plane_assumption: flat   # explicit assumption (v2 §13.1)
+geometry:
+  conflict_zones: []      # required before PET is computable (Milestone 4)
+  movements: []
+thresholds_profile: experimental_v1
