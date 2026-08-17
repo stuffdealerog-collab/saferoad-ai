@@ -88,5 +88,7 @@ def render(
 
     cap.release()
     writer.release()
+    from core.video_utils import to_h264
+    to_h264(out_path)
     log.info("annotated video written: %s (%d frames)", out_path, frame_idx)
     return out_path

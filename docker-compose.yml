@@ -1,0 +1,15 @@
+services:
+  saferoad:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./output:/app/output          # runs persist on the host
+      - ./sample_data:/app/sample_data
+    # demo flow:
+    #   docker compose up -d
+    #   docker compose exec saferoad python -m pipeline.run \
+    #     --video sample_data/synthetic_intersection.mp4 \
+    #     --tracker fake --script sample_data/synthetic_detections.json \
+    #     --camera configs/cameras/synthetic_cam.yaml
+    #   open http://localhost:8000

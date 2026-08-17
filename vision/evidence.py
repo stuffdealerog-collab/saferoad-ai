@@ -158,6 +158,8 @@ def render_event_clip(
 
     cap.release()
     writer.release()
+    from core.video_utils import to_h264
+    to_h264(out_path)
     log.info("evidence clip: %s (%.1fs window)", out_path.name, t1 - t0)
     return out_path
 

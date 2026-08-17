@@ -11,3 +11,12 @@ torchvision
 
 pyyaml>=6.0
 pytest>=8.0
+
+# Dashboard (Milestone 7)
+fastapi>=0.110
+uvicorn>=0.29
+httpx>=0.27            # TestClient transport
+python-multipart>=0.0.9
+
+# browsers don't play OpenCV's mp4v — bundled ffmpeg transcodes outputs to H.264
+imageio-ffmpeg>=0.4.9

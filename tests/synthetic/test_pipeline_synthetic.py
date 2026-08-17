@@ -193,6 +193,13 @@ def test_evidence_clip_rendered_for_event(synthetic_run):
     assert len(manifest) == len(events) == 1
     clip = synthetic_run / "08_evidence/clips" / manifest[0]["clip"]
     assert clip.exists() and clip.stat().st_size > 10_000
+    # browsers only play H.264 — mp4v would show a black rectangle on the demo
+    import av
+    with av.open(str(clip)) as c:
+        assert c.streams.video[0].codec_context.name == "h264", \
+            "evidence clip must be H.264 for browser playback"
+    with av.open(str(synthetic_run / "08_evidence/annotated.mp4")) as c:
+        assert c.streams.video[0].codec_context.name == "h264"
     import cv2
     cap = cv2.VideoCapture(str(clip))
     n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
