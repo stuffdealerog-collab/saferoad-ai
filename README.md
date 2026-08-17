@@ -4,8 +4,8 @@
 на видео с обычных городских камер. Технический план: `docs/` (техплан v2 —
 канонический контекст проекта).
 
-**Статус: Вехи 0–1 (инжест + детекция/трекинг + гейт качества).**
-Калибровка, физика конфликтов и near-miss — следующие вехи; см. план.
+**Статус: Вехи 0–2.5 (инжест, детекция/трекинг, гейт качества, калибровка,
+Калман/RTS).** Конфликтные зоны, TTC/PET и near-miss — следующие вехи; см. план.
 
 ## Быстрый старт
 
@@ -14,13 +14,15 @@ pip install -r requirements.txt
 # torch ставится CPU-сборкой, чтобы не тянуть CUDA:
 #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-# 1. Синтетический прогон (без YOLO, известная истина):
+# 1. Синтетический прогон (без YOLO, известная истина, с калибровкой):
 python scripts/make_synthetic_video.py
 python -m pipeline.run --video sample_data/synthetic_intersection.mp4 \
-    --tracker fake --script sample_data/synthetic_detections.json
+    --tracker fake --script sample_data/synthetic_detections.json \
+    --camera configs/cameras/synthetic_cam.yaml
 
-# 2. Реальное видео (YOLO + ByteTrack):
-python -m pipeline.run --video path/to/intersection.mp4
+# 2. Реальное видео (YOLO + ByteTrack; без --camera остановится на image space):
+python -m pipeline.run --video path/to/intersection.mp4 \
+    --camera configs/cameras/your_cam.yaml
 
 # 3. Тесты:
 python -m pytest tests/ -q

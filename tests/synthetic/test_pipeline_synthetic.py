@@ -33,6 +33,7 @@ def synthetic_run(tmp_path_factory):
         script=SCRIPT,
         weights="",
         out_root=out,
+        camera_path=ROOT / "configs/cameras/synthetic_cam.yaml",
     )
     return run_dir
 
@@ -79,6 +80,35 @@ def test_gate_verdicts_match_truth(synthetic_run):
     gap_tid = truth["expected_gap_split_track_id"]
     segments = [t for t in tracks if t["track_id"] == gap_tid]
     assert len(segments) == 2, f"track {gap_tid} must be split by the 1s occlusion"
+
+
+def test_ground_stage_artifacts_exist(synthetic_run):
+    for rel in [
+        "04_tracks_ground/calibration_summary.json",
+        "04_tracks_ground/tracks_ground.json",
+        "05_tracks_smoothed/states.json",
+        "05_tracks_smoothed/braking.json",
+    ]:
+        assert (synthetic_run / rel).exists(), f"missing artifact: {rel}"
+    summary = json.loads((synthetic_run / "04_tracks_ground/calibration_summary.json").read_text())
+    assert summary["reprojection_error_max_m"] < 0.01  # synthetic cal is exact
+
+
+def test_car1_speed_recovered_in_kmh(synthetic_run):
+    """car1 moves 120 px/s; synthetic calibration is 20 px/m -> 6.0 m/s = 21.6 km/h."""
+    states = json.loads((synthetic_run / "05_tracks_smoothed/states.json").read_text())
+    car1 = next(s for s in states if s["track_id"] == 1)
+    mid = car1["states"][15:-15]
+    mean_speed = sum(s["speed_mps"] for s in mid) / len(mid)
+    assert abs(mean_speed - 6.0) / 6.0 < 0.05, f"expected ~6 m/s, got {mean_speed:.2f}"
+    for s in mid:
+        assert s["speed_sigma_mps"] > 0  # uncertainty must be populated, never 0
+
+
+def test_no_phantom_braking_on_synthetic_constant_speeds(synthetic_run):
+    """Every synthetic actor moves at constant speed -> braking.json must be empty."""
+    braking = json.loads((synthetic_run / "05_tracks_smoothed/braking.json").read_text())
+    assert braking == [], f"phantom braking episodes: {braking}"
 
 
 def test_timestamps_come_from_pts_not_frame_math(synthetic_run):

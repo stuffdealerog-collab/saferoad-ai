@@ -6,9 +6,12 @@ Every run creates output/runs/<run_id>/ with per-stage serialized artifacts:
     00_ingest/           ingest_report.json, pts_map.json
     01_tracks_raw/       raw tracker output (jsonl per frame)
     03_tracks_gated/     tracks.json + quarantine/quarantine.json + health.json
+    04_tracks_ground/    calibration_summary.json, tracks_ground.json  (needs camera calibration)
+    05_tracks_smoothed/  states.json, braking.json                     (Kalman/RTS)
     08_evidence/         annotated.mp4
 
-(Stage numbers reserve slots for calibration/motion/conflicts — Milestones 2-5.)
+Stages 04-05 run only when the camera config has calibration; without it the
+pipeline legally stops at image space — it never guesses meters from pixels.
 
 Usage:
     python -m pipeline.run --video sample_data/clip.mp4 \
@@ -33,6 +36,8 @@ sys.path.insert(0, str(ROOT))
 
 from core.log import get_logger                          # noqa: E402
 from ingest.normalize import analyze, build_pts_map      # noqa: E402
+from motion.state_estimation import detect_hard_braking, estimate_track  # noqa: E402
+from vision.calibration import CameraCalibration         # noqa: E402
 from vision.detector import FakeTracker, FrameSource, YoloTracker  # noqa: E402
 from vision.renderer import render                       # noqa: E402
 from vision.track_quality import GateConfig, apply_gate  # noqa: E402
@@ -50,7 +55,8 @@ def _git_rev() -> str:
 
 
 def run(video: Path, thresholds_path: Path, tracker_kind: str, script: Path | None,
-        weights: str, out_root: Path, allow_rejected: bool = False) -> Path:
+        weights: str, out_root: Path, allow_rejected: bool = False,
+        camera_path: Path | None = None) -> Path:
     t_start = time.time()
     thresholds = yaml.safe_load(thresholds_path.read_text()) if thresholds_path.exists() else {}
     gate_cfg = GateConfig.from_dict(thresholds.get("track_quality", {}))
@@ -106,6 +112,53 @@ def run(video: Path, thresholds_path: Path, tracker_kind: str, script: Path | No
     (run_dir / "03_tracks_gated" / "health.json").write_text(json.dumps(
         health.to_dict(), indent=2))
 
+    # ---- stages 04-05: ground plane + state estimation ------------------
+    calibration = CameraCalibration.from_camera_yaml(camera_path) if camera_path else None
+    if calibration is not None:
+        g_dir = run_dir / "04_tracks_ground"
+        s_dir = run_dir / "05_tracks_smoothed"
+        g_dir.mkdir(exist_ok=True)
+        s_dir.mkdir(exist_ok=True)
+        g_dir.joinpath("calibration_summary.json").write_text(
+            json.dumps(calibration.summary(), indent=2))
+
+        ground_tracks, states_out, braking_out = [], [], []
+        for tr in passed:
+            gps = [calibration.project(p.bottom_center_px) for p in tr.points]
+            ground_tracks.append({
+                "track_id": tr.track_id, "segment": tr.segment, "cls": tr.cls,
+                "points": [
+                    {"t_s": round(p.t_s, 4), "x_m": round(g.x_m, 3), "y_m": round(g.y_m, 3),
+                     "sigma_m": round(g.sigma_m, 3), "inside_validity_mask": g.inside_validity_mask}
+                    for p, g in zip(tr.points, gps)
+                ],
+            })
+            if len(tr.points) >= 3:
+                states = estimate_track(
+                    ts=[p.t_s for p in tr.points],
+                    xs_m=[g.x_m for g in gps],
+                    ys_m=[g.y_m for g in gps],
+                    sigmas_m=[g.sigma_m for g in gps],
+                    inside_mask=[g.inside_validity_mask for g in gps],
+                )
+                braking = detect_hard_braking(states)
+                states_out.append({
+                    "track_id": tr.track_id, "segment": tr.segment, "cls": tr.cls,
+                    "states": [s.to_dict() for s in states],
+                })
+                if braking:
+                    braking_out.append({
+                        "track_id": tr.track_id, "segment": tr.segment, "cls": tr.cls,
+                        "episodes": braking,
+                    })
+        g_dir.joinpath("tracks_ground.json").write_text(json.dumps(ground_tracks, indent=1))
+        s_dir.joinpath("states.json").write_text(json.dumps(states_out, indent=1))
+        s_dir.joinpath("braking.json").write_text(json.dumps(braking_out, indent=1))
+        log.info("ground/motion stages done: %d tracks projected, %d braking episodes",
+                 len(ground_tracks), sum(len(b["episodes"]) for b in braking_out))
+    else:
+        log.info("no camera calibration — stages 04-05 skipped (image space only)")
+
     # ---- stage 08: annotated evidence -----------------------------------
     render(video, pts_map, passed, quarantined, run_dir / "08_evidence" / "annotated.mp4")
 
@@ -141,9 +194,11 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "output/runs")
     ap.add_argument("--allow-rejected", action="store_true",
                     help="run even if ingest rejected the video (untrustworthy results)")
+    ap.add_argument("--camera", type=Path, default=None,
+                    help="per-camera YAML with calibration (enables stages 04-05)")
     args = ap.parse_args()
     run(args.video, args.thresholds, args.tracker, args.script,
-        args.weights, args.out, args.allow_rejected)
+        args.weights, args.out, args.allow_rejected, camera_path=args.camera)
 
 
 if __name__ == "__main__":

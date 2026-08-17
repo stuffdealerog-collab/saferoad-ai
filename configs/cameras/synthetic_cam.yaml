@@ -5,11 +5,15 @@ video:
   expected_resolution: [1280, 720]
 calibration:
   method: manual_homography
-  image_points: []        # >= 4 reference points, filled at calibration time
-  ground_points_m: []
-  homography: null
+  # Synthetic camera geometry: pure top-down, 20 px = 1 m, origin at frame center.
+  # Chosen so ground truth is analytic: car1 @120 px/s = 6.0 m/s = 21.6 km/h.
+  image_points: [[0, 0], [1280, 0], [1280, 720], [0, 720], [640, 360]]
+  ground_points_m: [[-32.0, -18.0], [32.0, -18.0], [32.0, 18.0], [-32.0, 18.0], [0.0, 0.0]]
+  homography: null        # computed from the points at load time
   reprojection_error_m: null
-  validity_mask: null     # polygon (image coords) where calibration error is bounded
+  # validity mask: central 1180x620 px — a 50 px border strip is excluded to
+  # exercise the outside-mask flagging path
+  validity_mask: [[50, 50], [1230, 50], [1230, 670], [50, 670]]
   ground_plane_assumption: flat   # explicit assumption (v2 §13.1)
 geometry:
   conflict_zones: []      # required before PET is computable (Milestone 4)
