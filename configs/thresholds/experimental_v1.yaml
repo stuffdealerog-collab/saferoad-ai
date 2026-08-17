@@ -16,4 +16,26 @@ track_quality:
     bus: 0.40
     truck: 0.40
 
-# Milestones 4-5 will add conflict/near-miss thresholds here.
+nearmiss:
+  # trigger thresholds — EXPERIMENTAL until validated on the golden set
+  ttc_trigger_s: 2.0
+  pet_trigger_s: 1.5
+  separation_trigger_m: 2.0
+  rel_speed_bonus_mps: 8.0
+  hard_braking_window_s: 3.0
+  weights:
+    low_ttc: 3.0
+    very_low_ttc: 2.0
+    low_pet: 2.5
+    very_low_pet: 2.0
+    simultaneous_occupancy: 3.5
+    low_separation: 2.0
+    high_rel_speed: 1.5
+    pedestrian_involved: 2.0
+    two_wheeler_involved: 1.5
+    hard_braking_near_conflict: 1.5
+  severity_bands:
+    critical: 7.0
+    high: 5.0
+    medium: 3.0
+    low: 1.5

@@ -165,6 +165,26 @@ def test_crossing_cars_classified_as_crossing(synthetic_run):
     assert any(p["conflict_angle_class"] == "crossing" for p in cc)
 
 
+def test_exactly_one_nearmiss_event_the_zebra_case(synthetic_run):
+    """The whole point of the MVP in one assertion: the synthetic scene contains
+    exactly ONE near-miss-grade situation (person3 vs car1, PET 0.375s on the
+    zebra) — the engine must find it and nothing else."""
+    events = json.loads((synthetic_run / "07_events/events.json").read_text())
+    assert len(events) == 1, f"expected exactly 1 event, got {len(events)}: " + \
+        str([(e['road_user_a']['track_id'], e['road_user_b']['track_id'],
+              e['reason_codes']) for e in events])
+    ev = events[0]
+    assert {ev["road_user_a"]["track_id"], ev["road_user_b"]["track_id"]} == {1, 3}
+    assert "low_pet" in ev["reason_codes"]
+    assert "pedestrian_involved" in ev["reason_codes"]
+    assert ev["severity"] in ("high", "critical")
+    assert ev["zone_id"] == "zebra_west"
+    assert ev["thresholds_profile_id"] == "experimental_v1"
+    assert ev["metrics"]["pet_s"] is not None
+    # the event window must cover the actual conflict moment (~t=4.0-4.4s)
+    assert ev["t_start_s"] < 4.0 < ev["t_end_s"] or ev["t_start_s"] < 4.4 < ev["t_end_s"]
+
+
 def test_timestamps_come_from_pts_not_frame_math(synthetic_run):
     pts_map = json.loads((synthetic_run / "00_ingest/pts_map.json").read_text())
     assert all(b > a for a, b in zip(pts_map, pts_map[1:])), "PTS must be monotonic"

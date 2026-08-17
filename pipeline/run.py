@@ -9,6 +9,7 @@ Every run creates output/runs/<run_id>/ with per-stage serialized artifacts:
     04_tracks_ground/    calibration_summary.json, tracks_ground.json  (needs camera calibration)
     05_tracks_smoothed/  states.json, braking.json                     (Kalman/RTS)
     06_conflicts/        pairs.json, occupancies.json, pet.json        (needs zones for PET)
+    07_events/           events.json                                   (near-miss engine)
     08_evidence/         annotated.mp4
 
 Stages 04-05 run only when the camera config has calibration; without it the
@@ -40,6 +41,7 @@ from geometry.zones import load_zones                    # noqa: E402
 from ingest.normalize import analyze, build_pts_map      # noqa: E402
 from motion.state_estimation import detect_hard_braking, estimate_track  # noqa: E402
 from safety.conflicts import TrackStates, analyze_all    # noqa: E402
+from safety.nearmiss import build_events                 # noqa: E402
 from vision.calibration import CameraCalibration         # noqa: E402
 from vision.detector import FakeTracker, FrameSource, YoloTracker  # noqa: E402
 from vision.renderer import render                       # noqa: E402
@@ -173,8 +175,22 @@ def run(video: Path, thresholds_path: Path, tracker_kind: str, script: Path | No
             [o.to_dict() for o in occupancies], indent=1))
         c_dir.joinpath("pet.json").write_text(json.dumps(
             [p.__dict__ for p in pets], indent=1))
+
+        # ---- stage 07: near-miss events ---------------------------------
+        e_dir = run_dir / "07_events"
+        e_dir.mkdir(exist_ok=True)
+        profile_id = thresholds_path.stem
+        events = build_events(
+            pairs=[p.to_dict() for p in pairs],
+            pets=[p.__dict__ for p in pets],
+            braking=braking_out,
+            rules=thresholds.get("nearmiss"),
+            profile_id=profile_id,
+        )
+        e_dir.joinpath("events.json").write_text(json.dumps(
+            [e.to_dict() for e in events], indent=1))
     else:
-        log.info("no camera calibration — stages 04-06 skipped (image space only)")
+        log.info("no camera calibration — stages 04-07 skipped (image space only)")
 
     # ---- stage 08: annotated evidence -----------------------------------
     render(video, pts_map, passed, quarantined, run_dir / "08_evidence" / "annotated.mp4")
