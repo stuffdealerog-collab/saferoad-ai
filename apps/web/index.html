@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeRoad AI — превентивная аналитика дорожной безопасности</title>
+<style>
+  :root {
+    --bg: #141e2e; --card: #1d2b40; --card2: #24344d;
+    --amber: #ffb020; --text: #e8edf4; --muted: #8ea0b5;
+    --critical: #d64545; --high: #e8842c; --medium: #e0c040; --low: #7a8a9c;
+    --green: #3ba55d;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 14px;
+           padding: 18px 28px; border-bottom: 1px solid #2a3a52; }
+  header .logo { width: 38px; height: 38px; border-radius: 50%;
+                 background: var(--amber); display: flex; align-items: center;
+                 justify-content: center; font-size: 20px; }
+  header h1 { font-size: 20px; } header .sub { color: var(--muted); font-size: 13px; }
+  header select { margin-left: auto; background: var(--card); color: var(--text);
+                  border: 1px solid #2a3a52; border-radius: 8px; padding: 8px 12px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 28px 60px; }
+  .grid { display: grid; gap: 14px; }
+  .stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 22px; }
+  .stat { background: var(--card); border-radius: 12px; padding: 16px 18px; }
+  .stat .v { font-size: 30px; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  h2 { font-size: 17px; margin: 26px 0 12px; }
+  .two-col { grid-template-columns: 1.4fr 1fr; align-items: start; }
+  video { width: 100%; border-radius: 12px; background: #000; }
+  .panel { background: var(--card); border-radius: 12px; padding: 16px 18px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: 13px; }
+  .bar-row .name { width: 110px; color: var(--muted); }
+  .bar-row .bar { height: 14px; border-radius: 4px; min-width: 3px; }
+  .event { background: var(--card); border-radius: 12px; padding: 16px 18px;
+           margin-bottom: 12px; border-left: 5px solid var(--low); }
+  .event.critical { border-color: var(--critical); }
+  .event.high { border-color: var(--high); }
+  .event.medium { border-color: var(--medium); }
+  .event .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sev { font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 3px 10px;
+         border-radius: 20px; color: #fff; text-transform: uppercase; }
+  .sev.critical { background: var(--critical); } .sev.high { background: var(--high); }
+  .sev.medium { background: var(--medium); color: #222; } .sev.low { background: var(--low); }
+  .chip { background: var(--card2); border-radius: 20px; padding: 3px 10px;
+          font-size: 12px; color: var(--muted); }
+  .metrics { display: flex; gap: 22px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .metrics div .v { font-weight: 700; font-size: 17px; }
+  .metrics div .l { color: var(--muted); font-size: 11.5px; }
+  .reasons { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .reasons span { background: #33230a; color: var(--amber); border-radius: 6px;
+                  padding: 2px 8px; font-size: 12px; font-family: ui-monospace, monospace; }
+  .event video { margin-top: 12px; }
+  .disclaimer { margin-top: 30px; padding: 14px 18px; border: 1px solid #3a4a62;
+                border-radius: 12px; color: var(--muted); font-size: 13px; }
+  .health span { display: inline-block; margin-right: 16px; color: var(--muted); font-size: 13px; }
+  .health b { color: var(--text); }
+  .empty { color: var(--muted); padding: 30px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🛡</div>
+  <div><h1>SafeRoad AI</h1><div class="sub">превентивная аналитика дорожной безопасности — MVP</div></div>
+  <select id="runSelect"></select>
+</header>
+<main>
+  <div class="grid stats" id="stats"></div>
+  <div class="grid two-col">
+    <div>
+      <h2>Аннотированное видео</h2>
+      <video id="annotated" controls muted></video>
+      <div class="panel health" id="health" style="margin-top:12px"></div>
+    </div>
+    <div>
+      <h2>Аналитика</h2>
+      <div class="panel" id="severityChart"></div>
+      <div class="panel" id="classChart" style="margin-top:12px"></div>
+    </div>
+  </div>
+  <h2>Лента конфликтов</h2>
+  <div id="events"></div>
+  <div class="disclaimer" id="disclaimer"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (v, u='') => (v === null || v === undefined) ? 'н/д' : v + u;
+
+async function j(url) { const r = await fetch(url); if (!r.ok) throw new Error(url); return r.json(); }
+
+function bars(el, title, data, colorFn) {
+  const max = Math.max(...Object.values(data), 1);
+  el.innerHTML = `<b style="font-size:14px">${title}</b>` +
+    (Object.keys(data).length ? Object.entries(data).map(([k, v]) =>
+      `<div class="bar-row"><div class="name">${k}</div>
+       <div class="bar" style="width:${(v / max) * 100 * 0.6}%;background:${colorFn(k)}"></div>
+       <div>${v}</div></div>`).join('') : '<div class="empty">нет данных</div>');
+}
+
+const sevColor = s => ({critical:'#d64545', high:'#e8842c', medium:'#e0c040', low:'#7a8a9c'}[s] || '#7a8a9c');
+
+async function loadRun(runId) {
+  const s = await j(`/api/runs/${runId}/summary`);
+  const events = await j(`/api/runs/${runId}/events`);
+
+  const st = [
+    [fmt(s.video.duration_s, ' с'), 'проанализировано видео'],
+    [s.tracking.total_road_users, 'участников движения'],
+    [s.conflicts.pairs_analyzed, 'пар проанализировано'],
+    [s.conflicts.events_total, 'near-miss событий'],
+    [(s.conflicts.events_by_severity.critical || 0) + (s.conflicts.events_by_severity.high || 0),
+     'критичных и высоких'],
+    [s.calibration ? fmt(s.calibration.reprojection_error_max_m, ' м') : 'нет',
+     'ошибка калибровки (max)'],
+  ];
+  $('stats').innerHTML = st.map(([v, l]) =>
+    `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  $('annotated').src = `/media/${runId}/annotated.mp4`;
+
+  const h = s.tracking.health || {};
+  $('health').innerHTML =
+    `<span>треков прошло гейт: <b>${h.n_passed ?? '—'}</b></span>` +
+    `<span>в карантине: <b>${h.n_quarantined ?? '—'}</b></span>` +
+    `<span>разрезов по окклюзии: <b>${h.n_gap_splits ?? '—'}</b></span>` +
+    `<span>телепортов: <b>${h.n_teleports ?? '—'}</b></span>` +
+    `<span>FPS (факт): <b>${fmt(s.video.actual_fps)}</b></span>` +
+    (s.video.is_vfr ? `<span style="color:#e8842c"><b>VFR!</b></span>` : '');
+
+  bars($('severityChart'), 'События по severity', s.conflicts.events_by_severity, sevColor);
+  bars($('classChart'), 'Участники по классам', s.tracking.road_users_by_class, () => '#ffb020');
+
+  $('events').innerHTML = events.length ? events.map(e => `
+    <div class="event ${e.severity}">
+      <div class="head">
+        <span class="sev ${e.severity}">${e.severity}</span>
+        <b>${e.road_user_a.cls}#${e.road_user_a.track_id} × ${e.road_user_b.cls}#${e.road_user_b.track_id}</b>
+        <span class="chip">${e.metrics.conflict_angle_class || '—'}</span>
+        <span class="chip">t = ${e.t_start_s}–${e.t_end_s} с</span>
+        ${e.zone_id ? `<span class="chip">зона: ${e.zone_id}</span>` : ''}
+        <span class="chip">score ${e.score}</span>
+      </div>
+      <div class="metrics">
+        <div><div class="v">${fmt(e.metrics.min_ttc_s, ' с')}</div><div class="l">TTC min</div></div>
+        <div><div class="v">${fmt(e.metrics.pet_s, ' с')}</div><div class="l">PET</div></div>
+        <div><div class="v">${fmt(e.metrics.min_separation_m, ' м')}</div><div class="l">мин. дистанция</div></div>
+        <div><div class="v">${fmt(e.metrics.rel_speed_at_min_sep_mps, ' м/с')}</div><div class="l">отн. скорость</div></div>
+      </div>
+      <div class="reasons">${e.reason_codes.map(r => `<span>${r}</span>`).join('')}</div>
+      ${e.notes && e.notes.length ? `<div style="color:var(--muted);font-size:13px;margin-top:6px">${e.notes.join('; ')}</div>` : ''}
+      ${e.clip_url ? `<video src="${e.clip_url}" controls muted preload="metadata"></video>` : ''}
+    </div>`).join('') : '<div class="empty">Событий не обнаружено</div>';
+
+  $('disclaimer').textContent = '⚠ ' + s.disclaimer;
+}
+
+(async () => {
+  const runs = await j('/api/runs');
+  const sel = $('runSelect');
+  if (!runs.length) { document.querySelector('main').innerHTML =
+    '<div class="empty">Нет прогонов. Запустите: python -m pipeline.run --video ...</div>'; return; }
+  sel.innerHTML = runs.map(r => `<option value="${r.run_id}">${r.run_id} (${r.status})</option>`).join('');
+  sel.onchange = () => loadRun(sel.value);
+  await loadRun(runs[0].run_id);
+})();
+</script>
+</body>
+</html>

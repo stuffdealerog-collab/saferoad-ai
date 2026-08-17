@@ -185,6 +185,22 @@ def test_exactly_one_nearmiss_event_the_zebra_case(synthetic_run):
     assert ev["t_start_s"] < 4.0 < ev["t_end_s"] or ev["t_start_s"] < 4.4 < ev["t_end_s"]
 
 
+def test_evidence_clip_rendered_for_event(synthetic_run):
+    manifest_p = synthetic_run / "08_evidence/clips/manifest.json"
+    assert manifest_p.exists()
+    manifest = json.loads(manifest_p.read_text())
+    events = json.loads((synthetic_run / "07_events/events.json").read_text())
+    assert len(manifest) == len(events) == 1
+    clip = synthetic_run / "08_evidence/clips" / manifest[0]["clip"]
+    assert clip.exists() and clip.stat().st_size > 10_000
+    import cv2
+    cap = cv2.VideoCapture(str(clip))
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    # event window ~[3.0..5.4]s + 2*0.5s pad at 25fps -> at least 60 frames
+    assert n >= 60, f"clip too short: {n} frames"
+
+
 def test_timestamps_come_from_pts_not_frame_math(synthetic_run):
     pts_map = json.loads((synthetic_run / "00_ingest/pts_map.json").read_text())
     assert all(b > a for a, b in zip(pts_map, pts_map[1:])), "PTS must be monotonic"

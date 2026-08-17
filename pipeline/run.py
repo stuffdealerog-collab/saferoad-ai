@@ -42,6 +42,7 @@ from ingest.normalize import analyze, build_pts_map      # noqa: E402
 from motion.state_estimation import detect_hard_braking, estimate_track  # noqa: E402
 from safety.conflicts import TrackStates, analyze_all    # noqa: E402
 from safety.nearmiss import build_events                 # noqa: E402
+from vision.evidence import render_all_events            # noqa: E402
 from vision.calibration import CameraCalibration         # noqa: E402
 from vision.detector import FakeTracker, FrameSource, YoloTracker  # noqa: E402
 from vision.renderer import render                       # noqa: E402
@@ -191,9 +192,17 @@ def run(video: Path, thresholds_path: Path, tracker_kind: str, script: Path | No
             [e.to_dict() for e in events], indent=1))
     else:
         log.info("no camera calibration — stages 04-07 skipped (image space only)")
+        events, zones = [], []
 
     # ---- stage 08: annotated evidence -----------------------------------
     render(video, pts_map, passed, quarantined, run_dir / "08_evidence" / "annotated.mp4")
+    if events:
+        zones_by_id = {z.zone_id: z.polygon_m for z in zones}
+        clip_manifest = render_all_events(
+            video, pts_map, [e.to_dict() for e in events], passed,
+            calibration, zones_by_id, run_dir / "08_evidence" / "clips")
+        (run_dir / "08_evidence" / "clips" / "manifest.json").write_text(
+            json.dumps(clip_manifest, indent=2))
 
     _write_manifest(run_dir, video, thresholds_path, tracker_kind, weights,
                     status="ok", elapsed_s=time.time() - t_start)
