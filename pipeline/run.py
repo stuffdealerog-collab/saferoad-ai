@@ -8,6 +8,7 @@ Every run creates output/runs/<run_id>/ with per-stage serialized artifacts:
     03_tracks_gated/     tracks.json + quarantine/quarantine.json + health.json
     04_tracks_ground/    calibration_summary.json, tracks_ground.json  (needs camera calibration)
     05_tracks_smoothed/  states.json, braking.json                     (Kalman/RTS)
+    06_conflicts/        pairs.json, occupancies.json, pet.json        (needs zones for PET)
     08_evidence/         annotated.mp4
 
 Stages 04-05 run only when the camera config has calibration; without it the
@@ -35,8 +36,10 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core.log import get_logger                          # noqa: E402
+from geometry.zones import load_zones                    # noqa: E402
 from ingest.normalize import analyze, build_pts_map      # noqa: E402
 from motion.state_estimation import detect_hard_braking, estimate_track  # noqa: E402
+from safety.conflicts import TrackStates, analyze_all    # noqa: E402
 from vision.calibration import CameraCalibration         # noqa: E402
 from vision.detector import FakeTracker, FrameSource, YoloTracker  # noqa: E402
 from vision.renderer import render                       # noqa: E402
@@ -156,8 +159,22 @@ def run(video: Path, thresholds_path: Path, tracker_kind: str, script: Path | No
         s_dir.joinpath("braking.json").write_text(json.dumps(braking_out, indent=1))
         log.info("ground/motion stages done: %d tracks projected, %d braking episodes",
                  len(ground_tracks), sum(len(b["episodes"]) for b in braking_out))
+
+        # ---- stage 06: conflict analysis --------------------------------
+        c_dir = run_dir / "06_conflicts"
+        c_dir.mkdir(exist_ok=True)
+        zones = load_zones(camera_path)
+        track_states = [TrackStates.from_states_dict(d) for d in states_out]
+        frame_step = report.interval_median_s or 0.04
+        pairs, occupancies, pets = analyze_all(track_states, zones, frame_step)
+        c_dir.joinpath("pairs.json").write_text(json.dumps(
+            [p.to_dict() for p in pairs], indent=1))
+        c_dir.joinpath("occupancies.json").write_text(json.dumps(
+            [o.to_dict() for o in occupancies], indent=1))
+        c_dir.joinpath("pet.json").write_text(json.dumps(
+            [p.__dict__ for p in pets], indent=1))
     else:
-        log.info("no camera calibration — stages 04-05 skipped (image space only)")
+        log.info("no camera calibration — stages 04-06 skipped (image space only)")
 
     # ---- stage 08: annotated evidence -----------------------------------
     render(video, pts_map, passed, quarantined, run_dir / "08_evidence" / "annotated.mp4")

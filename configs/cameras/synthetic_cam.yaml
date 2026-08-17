@@ -16,6 +16,14 @@ calibration:
   validity_mask: [[50, 50], [1230, 50], [1230, 670], [50, 670]]
   ground_plane_assumption: flat   # explicit assumption (v2 §13.1)
 geometry:
-  conflict_zones: []      # required before PET is computable (Milestone 4)
+  conflict_zones:
+    # zebra crossing: image x [470..562] px, y [285..435] px -> ground meters
+    - id: zebra_west
+      type: pedestrian_crossing
+      polygon_ground_m: [[-8.5, -3.75], [-3.9, -3.75], [-3.9, 3.75], [-8.5, 3.75]]
+    # intersection core: overlap of the two roads
+    - id: intersection_core
+      type: junction
+      polygon_ground_m: [[-4.0, -4.0], [4.0, -4.0], [4.0, 4.0], [-4.0, 4.0]]
   movements: []
 thresholds_profile: experimental_v1

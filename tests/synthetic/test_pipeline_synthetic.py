@@ -111,6 +111,60 @@ def test_no_phantom_braking_on_synthetic_constant_speeds(synthetic_run):
     assert braking == [], f"phantom braking episodes: {braking}"
 
 
+def test_conflict_stage_artifacts_exist(synthetic_run):
+    for rel in ["06_conflicts/pairs.json", "06_conflicts/occupancies.json",
+                "06_conflicts/pet.json"]:
+        assert (synthetic_run / rel).exists(), f"missing artifact: {rel}"
+
+
+def test_pedestrian_car_pet_matches_analytic_truth(synthetic_run):
+    """Analytic truth of the synthetic scene (20 px/m, zebra zone x[-8.5,-3.9]):
+    person3 exits the zebra zone at t=4.0s (bottom-center y=435px);
+    car1 enters it at t=4.375s (bottom-center x=470px) -> PET = 0.375s."""
+    pets = json.loads((synthetic_run / "06_conflicts/pet.json").read_text())
+    zebra = [p for p in pets if p["applicable"] and p["zone_id"] == "zebra_west"
+             and {p["first"]["track_id"], p["second"]["track_id"]} == {1, 3}]
+    assert zebra, "person3->car1 PET through zebra_west must exist"
+    pet = zebra[0]["pet_s"]
+    assert abs(pet - 0.375) < 0.12, f"expected PET ~0.375s, got {pet}"  # +- ~3 frames
+
+
+def test_occlusion_truncated_occupancy_never_produces_pet(synthetic_run):
+    """car2 disappears at t=5.0s while inside intersection_core -> its exit is
+    unobserved; every PET involving that occupancy as 'first' must be refused."""
+    occs = json.loads((synthetic_run / "06_conflicts/occupancies.json").read_text())
+    trunc = [o for o in occs if o["track_id"] == 2 and o["zone_id"] == "intersection_core"
+             and not o["exit_observed"]]
+    assert trunc, "car2 segment-0 must have an exit-unobserved occupancy in the core"
+
+    pets = json.loads((synthetic_run / "06_conflicts/pet.json").read_text())
+    for p in pets:
+        if p["applicable"] and p["first"]["track_id"] == 2 and \
+                p["zone_id"] == "intersection_core" and not p["first"]["exit_observed"]:
+            raise AssertionError(f"fake PET from truncated occupancy: {p}")
+
+
+def test_car_pedestrian_min_separation_reasonable(synthetic_run):
+    """Analytic: closest approach car1<->person3 is ~5.2m at t~4.5s."""
+    pairs = json.loads((synthetic_run / "06_conflicts/pairs.json").read_text())
+    cp = [p for p in pairs if p["analyzable"] and
+          {p["track_a"]["track_id"], p["track_b"]["track_id"]} == {1, 3}]
+    assert cp, "car1-person3 pair must be analyzable"
+    p = cp[0]
+    assert abs(p["min_separation_m"] - 5.2) < 0.6, p["min_separation_m"]
+    assert p["conflict_angle_class"] == "pedestrian"
+    assert 4.0 < p["t_min_separation_s"] < 5.0
+
+
+def test_crossing_cars_classified_as_crossing(synthetic_run):
+    """car1 (east) vs car2 (south): heading difference ~90 deg -> crossing."""
+    pairs = json.loads((synthetic_run / "06_conflicts/pairs.json").read_text())
+    cc = [p for p in pairs if p["analyzable"] and
+          {p["track_a"]["track_id"], p["track_b"]["track_id"]} == {1, 2}]
+    assert cc
+    assert any(p["conflict_angle_class"] == "crossing" for p in cc)
+
+
 def test_timestamps_come_from_pts_not_frame_math(synthetic_run):
     pts_map = json.loads((synthetic_run / "00_ingest/pts_map.json").read_text())
     assert all(b > a for a, b in zip(pts_map, pts_map[1:])), "PTS must be monotonic"
