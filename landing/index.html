@@ -165,6 +165,27 @@ h2 .it{color:var(--o)}
 @media (max-width:1000px){.road{grid-template-columns:1fr 1fr;gap:24px}.road::before{display:none}}
 @media (max-width:560px){.road{grid-template-columns:1fr}}
 
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
+.plan{border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:28px 26px 30px;
+  display:flex;flex-direction:column;position:relative;transition:border-color .3s,transform .3s}
+.plan:hover{border-color:var(--line2);transform:translateY(-4px)}
+.plan.hi{border-color:rgba(255,107,26,.45);
+  background:linear-gradient(180deg,rgba(255,107,26,.09),var(--panel) 52%)}
+.plan .tag2{position:absolute;top:20px;right:22px;font-size:10px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:#0d0d0f;background:var(--o);border-radius:999px;padding:4px 11px}
+.plan h3{font-size:16px;font-weight:600;color:var(--mut);letter-spacing:-.2px}
+.plan .p{margin-top:16px;font-size:clamp(26px,3vw,34px);font-weight:600;letter-spacing:-1.4px;line-height:1}
+.plan .u{margin-top:9px;font-size:13px;color:var(--dim)}
+.plan ul{list-style:none;padding:0;margin:22px 0 0;border-top:1px solid var(--line);padding-top:20px}
+.plan li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--mut);margin-bottom:11px}
+.plan li svg{width:15px;height:15px;color:var(--o);flex:none;margin-top:2px}
+.extras{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px}
+.extra{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.02);padding:20px 22px}
+.extra b{display:block;font-size:14px;font-weight:600}
+.extra span{display:block;margin-top:6px;font-size:13px;color:var(--mut)}
+.pricenote{margin-top:22px;font-size:12.5px;color:var(--dim);line-height:1.7;max-width:900px}
+@media (max-width:960px){.plans,.extras{grid-template-columns:1fr}}
+
 .cta{border:1px solid var(--line);border-radius:24px;overflow:hidden;
   display:grid;grid-template-columns:1fr 1.05fr;background:var(--panel)}
 .cta .art{position:relative;min-height:320px;background:#0a0a0c}
@@ -217,6 +238,7 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
     <a href="#product" data-i18n="nav1">Продукт</a>
     <a href="#how" data-i18n="nav2">Технология</a>
     <a href="#impact" data-i18n="nav3">Результаты</a>
+    <a href="#pricing" data-i18n="nav5">Тарифы</a>
     <a href="#roadmap" data-i18n="nav4">Дорожная карта</a>
   </div>
   <div class="langs">
@@ -447,6 +469,69 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
   </div>
 </div></section>
 
+<section id="pricing"><div class="wrap">
+  <div class="head-row rv">
+    <div>
+      <div class="kick" data-i18n="pl_k">Тарифы</div>
+      <h2 data-i18n="pl_h">Цена одного перекрёстка — <span class="it">доли процента</span> от его реконструкции</h2>
+    </div>
+    <p class="sub" data-i18n="pl_s">Ориентировочные цены. Окончательные тарифы фиксируются по итогам первого платного пилота, когда станет известна реальная себестоимость подключения камеры.</p>
+  </div>
+
+  <div class="plans">
+    <div class="plan rv">
+      <h3 data-i18n="pl1h">Пилот</h3>
+      <div class="p">60 <span style="font-size:.5em;font-weight:500" data-i18n="mln">млн сум</span></div>
+      <div class="u" data-i18n="pl1u">≈ $5 000 · разово, 4–6 недель</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl1a">Один перекрёсток</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl1b">Калибровка камеры и настройка зон</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl1c">Анализ записей и найденные события</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl1d">Отчёт с доказательными клипами</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl1e">Презентация результатов заказчику</span></li>
+      </ul>
+    </div>
+
+    <div class="plan hi rv">
+      <span class="tag2" data-i18n="pl_main">Основной</span>
+      <h3 data-i18n="pl2h">Подписка «Базовый»</h3>
+      <div class="p">1,5 <span style="font-size:.5em;font-weight:500" data-i18n="mln">млн сум</span></div>
+      <div class="u" data-i18n="pl2u">≈ $125 · в месяц за перекрёсток</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl2a">Анализ пиковых часов ежедневно</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl2b">Дашборд и лента конфликтов</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl2c">Ежемесячный отчёт по риску</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl2d">Клипы критичных событий</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl2e">Договор от 12 месяцев</span></li>
+      </ul>
+    </div>
+
+    <div class="plan rv">
+      <h3 data-i18n="pl3h">Подписка «Полный»</h3>
+      <div class="p">3 <span style="font-size:.5em;font-weight:500" data-i18n="mln">млн сум</span></div>
+      <div class="u" data-i18n="pl3u">≈ $250 · в месяц за перекрёсток</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl3a">Непрерывный анализ потока</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl3b">Все события с доказательными клипами</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl3c">Выгрузка данных и API</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl3d">Приоритетная поддержка</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.2 4.2L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="pl3e">От 50 перекрёстков — 1 млн сум за каждый</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="extras">
+    <div class="extra rv"><b data-i18n="ex1h">Проект «до / после»</b>
+      <span data-i18n="ex1p">от 90 млн сум · ≈ $7 500 за объект — замер до и после реконструкции</span></div>
+    <div class="extra rv"><b data-i18n="ex2h">Городской аудит</b>
+      <span data-i18n="ex2p">от 300 млн сум · ≈ $25 000 за ранжирование 30–50 перекрёстков</span></div>
+    <div class="extra rv"><b data-i18n="ex3h">Интеграция и обучение</b>
+      <span data-i18n="ex3p">по объёму работ — подключение к системам заказчика, обучение инженеров</span></div>
+  </div>
+
+  <p class="pricenote rv" data-i18n="pl_note">Расчёт при курсе около 11 900 сум за доллар. Цены указаны без НДС и являются рабочей гипотезой: они будут уточнены после первого платного пилота.</p>
+</div></section>
+
 <section id="contact" style="padding-top:0"><div class="wrap">
   <div class="cta rv">
     <div class="art"><canvas id="scene2"></canvas></div>
@@ -471,6 +556,7 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
       <a href="#product" data-i18n="nav1">Продукт</a>
       <a href="#how" data-i18n="nav2">Технология</a>
       <a href="#impact" data-i18n="nav3">Результаты</a>
+      <a href="#pricing" data-i18n="nav5">Тарифы</a>
       <a href="#roadmap" data-i18n="nav4">Дорожная карта</a>
       <a href="mailto:stuffdealerog@gmail.com">stuffdealerog@gmail.com</a>
     </div>
@@ -481,6 +567,25 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
 <script>
 const T = { ru:{}, uz:{
  nav1:"Mahsulot", nav2:"Texnologiya", nav3:"Natijalar", nav4:"Yo‘l xaritasi",
+ nav5:"Tariflar", mln:"mln so‘m", pl_main:"Asosiy",
+ pl_k:"Tariflar", pl_h:"Bitta chorraha narxi — uni rekonstruksiya qilish qiymatining <span class='it'>foiz ulushi</span>",
+ pl_s:"Taxminiy narxlar. Yakuniy tariflar birinchi pullik pilot yakunida, kamerani ulash tannarxi ma’lum bo‘lgach belgilanadi.",
+ pl1h:"Pilot", pl1u:"≈ $5 000 · bir marta, 4–6 hafta",
+ pl1a:"Bitta chorraha", pl1b:"Kamerani kalibrlash va zonalarni sozlash",
+ pl1c:"Yozuvlar tahlili va topilgan hodisalar", pl1d:"Dalil kliplari bilan hisobot",
+ pl1e:"Natijalarni buyurtmachiga taqdim etish",
+ pl2h:"«Bazaviy» obuna", pl2u:"≈ $125 · oyiga har bir chorraha uchun",
+ pl2a:"Har kuni eng gavjum soatlar tahlili", pl2b:"Dashbord va konfliktlar lentasi",
+ pl2c:"Oylik xavf hisoboti", pl2d:"Kritik hodisalar kliplari", pl2e:"Shartnoma 12 oydan",
+ pl3h:"«To‘liq» obuna", pl3u:"≈ $250 · oyiga har bir chorraha uchun",
+ pl3a:"Uzluksiz oqim tahlili", pl3b:"Barcha hodisalar dalil kliplari bilan",
+ pl3c:"Ma’lumotlarni yuklab olish va API", pl3d:"Ustuvor qo‘llab-quvvatlash",
+ pl3e:"50 ta chorrahadan — har biri uchun 1 mln so‘m",
+ ex1h:"«Oldin / keyin» loyihasi", ex1p:"90 mln so‘mdan · ≈ $7 500 — rekonstruksiyadan oldin va keyin o‘lchov",
+ ex2h:"Shahar auditi", ex2p:"300 mln so‘mdan · ≈ $25 000 — 30–50 chorrahani saralash",
+ ex3h:"Integratsiya va o‘qitish", ex3p:"ish hajmiga qarab — buyurtmachi tizimlariga ulash, muhandislarni o‘qitish",
+ pl_note:"Hisob-kitob 1 dollar uchun taxminan 11 900 so‘m kursida. Narxlar QQSsiz va ishchi gipoteza hisoblanadi: ular birinchi pullik pilotdan keyin aniqlashtiriladi.",
+
  cta:"Pilot haqida gaplashish", cta2:"Qanday ishlaydi",
  badge:"Xavfsiz yo‘llar uchun sun’iy intellekt · O‘zbekiston",
  h1a:"Keyingi", h1b:"avariyani", h1c:"u sodir bo‘lishidan oldin oldini oling.",
@@ -525,6 +630,25 @@ const T = { ru:{}, uz:{
  fine:"SafeRoad AI — yo‘l xavfsizligining preventiv tahlili; kuzatuv tizimi ham, jarima kameralari ham emas. Xavf ko‘rsatkichlari razmetkalangan ma’lumotlarda validatsiyagacha eksperimental chegaralardan foydalanadi; xavf baholari — ustuvorlik indekslari, avariya ehtimoli emas. Manbalar: JSST (2023), O‘zbekiston IIV YHXX (2025). © 2026 SafeRoad AI."
 }, en:{
  nav1:"Product", nav2:"Technology", nav3:"Results", nav4:"Roadmap",
+ nav5:"Pricing", mln:"M UZS", pl_main:"Core",
+ pl_k:"Pricing", pl_h:"One intersection costs <span class='it'>a fraction of a percent</span> of rebuilding it",
+ pl_s:"Indicative prices. Final tariffs are set after the first paid pilot, once the real cost of connecting a camera is known.",
+ pl1h:"Pilot", pl1u:"≈ $5,000 · one-off, 4–6 weeks",
+ pl1a:"One intersection", pl1b:"Camera calibration and zone setup",
+ pl1c:"Footage analysis and detected events", pl1d:"Report with video evidence clips",
+ pl1e:"Presentation of results to the client",
+ pl2h:"Subscription «Basic»", pl2u:"≈ $125 · per intersection per month",
+ pl2a:"Daily analysis of peak hours", pl2b:"Dashboard and conflict feed",
+ pl2c:"Monthly risk report", pl2d:"Clips of critical events", pl2e:"12-month contract",
+ pl3h:"Subscription «Full»", pl3u:"≈ $250 · per intersection per month",
+ pl3a:"Continuous stream analysis", pl3b:"All events with evidence clips",
+ pl3c:"Data export and API", pl3d:"Priority support",
+ pl3e:"From 50 intersections — $85 each",
+ ex1h:"Before / after project", ex1p:"from ≈ $7,500 per site — measurement before and after a redesign",
+ ex2h:"City-wide audit", ex2p:"from ≈ $25,000 — risk ranking of 30–50 intersections",
+ ex3h:"Integration and training", ex3p:"scoped per project — connection to client systems, engineer training",
+ pl_note:"Converted at roughly 11,900 UZS per US dollar. Prices exclude VAT and are a working hypothesis to be refined after the first paid pilot.",
+
  cta:"Discuss a pilot", cta2:"See how it works",
  badge:"AI for safer roads · Uzbekistan",
  h1a:"Prevent the next", h1b:"crash", h1c:"before it happens.",
