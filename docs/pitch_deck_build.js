@@ -632,6 +632,84 @@ async function iconPng(name, hexColor, px = 256) {
   }
 
   // =================================================================
+  // SLIDE — MARKET LESSONS (dark)
+  // =================================================================
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.dark };
+    title(s, "Уроки рынка: разбор чужих кейсов", { color: C.light });
+    kicker(s, "Мы изучили всех, кто делал near-miss аналитику до нас", { color: "8FA2B8" });
+
+    const cases = [
+      ["MicroTraffic", "Куплена Miovision, 2023", "Лидер именно near-miss аналитики — поглощён платформой, у которой уже стояли камеры"],
+      ["Brisk Synergies", "Куплена Transoft", "Технология сильная, канал продаж — чужой"],
+      ["Waycare", "Куплена Rekor за $61 млн", "Покупатель к 2026 г. — в предбанкротном состоянии"],
+      ["Hayden AI", "Выручка ~$20k/камера/год", "Единственная растущая: платят не из бюджета развития, а из штрафов"],
+    ];
+    const cwS = 2.98, chS = 2.05;
+    cases.forEach((c, i) => {
+      const x = 0.55 + i * (cwS + 0.13);
+      s.addShape("roundRect", { x, y: 1.68, w: cwS, h: chS, fill: { color: C.dark2 }, rectRadius: 0.08 });
+      s.addText(c[0], { x: x + 0.25, y: 1.85, w: cwS - 0.5, h: 0.36, fontFace: F.head, fontSize: 15, bold: true, color: C.light, margin: 0 });
+      s.addText(c[1], { x: x + 0.25, y: 2.22, w: cwS - 0.5, h: 0.34, fontFace: F.body, fontSize: 11.5, bold: true, color: i === 3 ? C.green : C.amber, margin: 0 });
+      s.addText(c[2], { x: x + 0.25, y: 2.62, w: cwS - 0.5, h: 1.0, fontFace: F.body, fontSize: 11, color: "9FB0C4", margin: 0 });
+    });
+
+    s.addShape("roundRect", { x: 0.55, y: 4.05, w: 12.2, h: 1.02, fill: { color: "24344B" }, rectRadius: 0.08 });
+    s.addText([
+      { text: "Независимых выживших: 0 из 4.  ", options: { bold: true, color: C.amber } },
+      { text: "«Near-miss аналитика» — это метод, а не бизнес-модель. Бизнес строится вокруг того, за что государство уже обязано платить.", options: { color: "D5DEE9" } },
+    ], { x: 0.9, y: 4.15, w: 11.5, h: 0.82, fontFace: F.body, fontSize: 13.5, valign: "middle", margin: 0 });
+
+    const lessons = [
+      "Категории «near-miss» в бюджете не существует — закупка идёт как ИТС или общественная безопасность",
+      "Выживает тот, кому платит не бюджет развития: штрафы, гранты, деньги банков развития",
+      "Пилот — не продажа, а юридическое основание для закупки без тендера",
+    ];
+    let ly = 5.35;
+    lessons.forEach((t) => {
+      s.addShape("ellipse", { x: 0.62, y: ly + 0.07, w: 0.13, h: 0.13, fill: { color: C.amber } });
+      s.addText(t, { x: 0.95, y: ly - 0.03, w: 11.8, h: 0.42, fontFace: F.body, fontSize: 12.5, color: "B8C6D6", margin: 0 });
+      ly += 0.5;
+    });
+    pageFooter(s, 0, true);
+  }
+
+  // =================================================================
+  // SLIDE — GO-TO-MARKET STRATEGY (light)
+  // =================================================================
+  {
+    const s = pres.addSlide();
+    s.background = { color: C.light };
+    title(s, "Стратегия выхода на рынок");
+    kicker(s, "Не продавать ИИ — стать оператором обязательной государственной функции");
+
+    const hor = [
+      ["0–12 мес.", "Услуга, а не софт", "Продукт — «Аудит безопасности перекрёстка»: отчёт, ранжирование опасных мест, видеодоказательства. Услугу госзаказчику купить быстрее, чем подписку на ПО.", "Результат: первый платящий заказчик + отчёт о точности, проверенный независимым экспертом"],
+      ["12–30 мес.", "Подписка поверх доказанной точности", "Переход аудитов в годовую подписку, «до/после» под каждую реконструкцию, включение методики в нормативные документы и реестр отечественного ПО.", "Результат: регуляторное встраивание + первый заказчик за пределами Узбекистана через партнёра"],
+      ["30–60 мес.", "Инфраструктура, а не подрядчик", "Национальная платформа мониторинга индекса «Безопасная дорога»; обезличенные данные как продукт для страховых, проектировщиков и банков развития.", "Результат: экспорт в страны с тем же профилем — камеры есть, смертность высокая, есть донорские деньги"],
+    ];
+    let hy = 1.72;
+    hor.forEach(([per, name, body, out], i) => {
+      s.addShape("roundRect", { x: 0.55, y: hy, w: 12.2, h: 1.3, fill: { color: C.ice }, rectRadius: 0.08 });
+      s.addShape("roundRect", { x: 0.55, y: hy, w: 0.09, h: 1.3, fill: { color: i === 0 ? C.amber : (i === 1 ? C.amberDeep : C.slate) }, rectRadius: 0.03 });
+      s.addText(per, { x: 0.85, y: hy + 0.14, w: 1.55, h: 0.3, fontFace: F.head, fontSize: 12.5, bold: true, color: C.amberDeep, margin: 0 });
+      s.addText(name, { x: 0.85, y: hy + 0.46, w: 3.6, h: 0.7, fontFace: F.head, fontSize: 14, bold: true, color: C.ink, margin: 0 });
+      s.addText(body, { x: 4.7, y: hy + 0.14, w: 5.1, h: 1.02, fontFace: F.body, fontSize: 11, color: C.slate, margin: 0 });
+      s.addText(out, { x: 10.0, y: hy + 0.14, w: 2.6, h: 1.02, fontFace: F.body, fontSize: 10, color: C.ink, italic: true, margin: 0 });
+      hy += 1.42;
+    });
+
+    s.addShape("roundRect", { x: 0.55, y: hy + 0.06, w: 12.2, h: 1.02, fill: { color: C.dark }, rectRadius: 0.08 });
+    s.addText("Что реально защищает бизнес", { x: 0.9, y: hy + 0.16, w: 4.0, h: 0.3, fontFace: F.head, fontSize: 12.5, bold: true, color: C.amber, margin: 0 });
+    s.addText([
+      { text: "1) Регуляторное встраивание методики  •  2) Валидированный датасет Центральной Азии  •  3) Исторические ряды «до/после».  ", options: { color: "D5DEE9" } },
+      { text: "Алгоритмы моатом не являются — и мы этого не утверждаем.", options: { color: C.amber, bold: true } },
+    ], { x: 0.9, y: hy + 0.48, w: 11.5, h: 0.5, fontFace: F.body, fontSize: 11.5, margin: 0 });
+    pageFooter(s, 0, false);
+  }
+
+  // =================================================================
   // SLIDE 9 — COMPETITION (light)
   // =================================================================
   {
