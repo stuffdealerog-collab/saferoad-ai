@@ -31,6 +31,9 @@ DEFAULT_RULES = {
     "min_rel_speed_mps": 1.5,        # below this the pair is not a conflict, whatever
                                      # the geometry says (a walker easing past a parked
                                      # car yields TTC ~0 s at 0.1 m/s of closing speed)
+    "min_vehicle_speed_mps": 2.5,    # a surrogate safety measure describes VEHICLE
+                                     # kinematics: if no vehicle in the pair was moving,
+                                     # a pedestrian stepping around it is not a near-miss
     "hard_braking_window_s": 3.0,    # braking episode within this window of the conflict
     # reason-code weights
     "weights": {
@@ -112,6 +115,9 @@ def build_events(
         # other are not in conflict, however small the distance between them is.
         rel_at_sep = pa.get("rel_speed_at_min_sep_mps")
         if rel_at_sep is not None and rel_at_sep < rules["min_rel_speed_mps"]:
+            continue
+        veh_speed = pa.get("max_vehicle_speed_at_min_sep_mps")
+        if veh_speed is not None and veh_speed < rules["min_vehicle_speed_mps"]:
             continue
         codes: list[str] = []
         notes: list[str] = []

@@ -23,6 +23,7 @@ nearmiss:
   separation_trigger_m: 2.0
   rel_speed_bonus_mps: 8.0
   min_rel_speed_mps: 1.5     # below this a pair is not a conflict regardless of geometry
+  min_vehicle_speed_mps: 2.5 # no vehicle actually moving -> not a traffic conflict
   hard_braking_window_s: 3.0
   weights:
     low_ttc: 3.0

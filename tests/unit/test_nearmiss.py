@@ -145,3 +145,27 @@ def test_missing_rel_speed_does_not_silently_drop_the_pair():
         [pair(min_ttc_s=1.2, t_min_ttc_s=2.0, rel_speed_at_min_sep_mps=None)], [], [],
     )
     assert len(events) == 1
+
+
+def test_stationary_vehicle_with_walker_is_not_a_conflict():
+    """A person stepping around a parked car is not a surrogate safety event.
+
+    Second regression found by the interactive simulation: the relative-speed
+    floor alone still let a 1.9 m/s walker brushing a stopped vehicle score.
+    """
+    events = build_events(
+        [pair(cls_b="person", min_ttc_s=0.4, t_min_ttc_s=2.0, min_separation_m=0.3,
+              rel_speed_at_min_sep_mps=1.9, max_vehicle_speed_at_min_sep_mps=0.0)],
+        [], [],
+    )
+    assert events == []
+
+
+def test_moving_vehicle_with_walker_still_fires():
+    events = build_events(
+        [pair(cls_b="person", min_ttc_s=0.4, t_min_ttc_s=2.0, min_separation_m=0.3,
+              rel_speed_at_min_sep_mps=1.9, max_vehicle_speed_at_min_sep_mps=9.0)],
+        [], [],
+    )
+    assert len(events) == 1
+    assert "pedestrian_involved" in events[0].reason_codes
