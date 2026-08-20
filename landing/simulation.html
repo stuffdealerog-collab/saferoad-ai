@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SafeRoad AI — интерактивная симуляция детекции near-miss</title>
+<meta name="description" content="Интерактивная демонстрация метода: как из видео с камеры получаются TTC, PET и объяснимые события почти-аварий.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@1,500&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08080a; --panel:#111114; --panel2:#16161a; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+  --ink:#f4f4f6; --mut:#93939e; --dim:#5f5f6b;
+  --o:#ff6b1a; --o2:#ff9142; --red:#ef4444; --amb:#f59e0b; --violet:#a78bfa; --green:#34d399; --blue:#60a5fa;
+}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 "Inter",-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+.it{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:500}
+button{font-family:inherit}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:1px solid var(--line);background:rgba(8,8,10,.86);backdrop-filter:blur(16px)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16.5px;letter-spacing:-.2px}
+.brand span{color:var(--o)}
+.brand svg{flex:none}
+.badge{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--amb);
+  border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.1);padding:4px 10px;border-radius:999px;font-weight:600}
+.top .sp{margin-left:auto}
+.langs{display:flex;gap:2px;border:1px solid var(--line);border-radius:999px;padding:3px}
+.langs button{background:none;border:0;color:var(--dim);font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;transition:.18s}
+.langs button.on{background:rgba(255,255,255,.1);color:var(--ink)}
+.backlink{font-size:13.5px;color:var(--mut);display:flex;align-items:center;gap:7px;transition:.18s}
+.backlink:hover{color:var(--ink)}
+
+/* ---------- layout ---------- */
+.page{max-width:1500px;margin:0 auto;padding:22px 20px 60px}
+.intro{margin-bottom:20px;max-width:820px}
+.intro h1{font-size:29px;line-height:1.18;letter-spacing:-.8px;font-weight:700}
+.intro p{color:var(--mut);font-size:15px;margin-top:9px}
+
+/* pipeline strip */
+.pipe{display:flex;gap:0;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px;background:var(--panel)}
+.st{flex:1 1 0;min-width:118px;padding:11px 13px;border-right:1px solid var(--line);position:relative;transition:.25s}
+.st:last-child{border-right:0}
+.st .n{font-size:10.5px;color:var(--dim);font-weight:600}
+.st .t{font-size:12.8px;font-weight:600;margin-top:2px;color:var(--mut);transition:.25s}
+.st.on{background:rgba(255,107,26,.09)}
+.st.on .t{color:var(--o2)}
+.st.on:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--o)}
+
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start}
+.card{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+.card .hd{display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.card .hd h3{font-size:13.5px;font-weight:600;letter-spacing:-.1px}
+.card .hd .sub{font-size:11.5px;color:var(--dim);margin-left:auto}
+canvas{display:block;width:100%}
+.cvwrap{position:relative;background:#050506}
+
+/* toggles inside canvas header */
+.tg{display:flex;gap:6px;flex-wrap:wrap}
+.tg button{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--dim);
+  font-size:11px;font-weight:600;padding:4px 9px;border-radius:7px;cursor:pointer;transition:.16s}
+.tg button.on{background:rgba(255,107,26,.16);border-color:rgba(255,107,26,.4);color:var(--o2)}
+.tg button:hover{color:var(--ink)}
+
+/* controls */
+.ctl{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:15px}
+.ctlrow{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end}
+.pbtns{display:flex;gap:8px;align-items:center}
+.pb{display:inline-flex;align-items:center;gap:8px;border-radius:9px;font-weight:600;font-size:13.5px;
+  padding:9px 15px;cursor:pointer;transition:.18s;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--ink)}
+.pb:hover{background:rgba(255,255,255,.1)}
+.pb.p{background:linear-gradient(135deg,#ff7a29,#f2560c);border-color:transparent;color:#fff}
+.pb.p:hover{filter:brightness(1.08)}
+.sl{min-width:160px;flex:1 1 160px}
+.sl label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:6px;font-weight:500}
+.sl label b{color:var(--ink);font-weight:600}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.14);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--o);cursor:pointer;box-shadow:0 0 0 4px rgba(255,107,26,.16)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--o);cursor:pointer}
+.sep{height:1px;background:var(--line);margin:15px 0}
+.scen{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.scen .lbl{font-size:11.5px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.sc{border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--ink);font-size:13px;font-weight:500;
+  padding:8px 13px;border-radius:9px;cursor:pointer;transition:.18s;display:flex;align-items:center;gap:8px}
+.sc:hover{background:rgba(255,107,26,.12);border-color:rgba(255,107,26,.4)}
+.sc i{width:6px;height:6px;border-radius:50%;background:var(--o);flex:none;font-style:normal}
+
+/* metrics */
+.mets{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}
+.met{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:rgba(255,255,255,.02)}
+.met .k{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.met .v{font-size:21px;font-weight:700;letter-spacing:-.5px;margin-top:3px;font-family:"JetBrains Mono",monospace}
+.met .u{font-size:12px;color:var(--dim);font-weight:400}
+.met.hot{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.08)}
+.met.hot .v{color:#fca5a5}
+.met.warn{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.07)}
+.met.warn .v{color:#fcd34d}
+
+/* events */
+.evwrap{max-height:390px;overflow-y:auto}
+.evwrap::-webkit-scrollbar{width:6px}
+.evwrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:3px}
+.ev{padding:12px 15px;border-bottom:1px solid var(--line);cursor:pointer;transition:.16s}
+.ev:hover{background:rgba(255,255,255,.03)}
+.ev.sel{background:rgba(255,107,26,.08);box-shadow:inset 2px 0 0 var(--o)}
+.ev .r1{display:flex;align-items:center;gap:9px}
+.sev{font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:5px;text-transform:uppercase}
+.sev.critical{background:rgba(239,68,68,.16);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+.sev.high{background:rgba(245,158,11,.16);color:#fcd34d;border:1px solid rgba(245,158,11,.4)}
+.sev.medium{background:rgba(96,165,250,.14);color:#93c5fd;border:1px solid rgba(96,165,250,.35)}
+.sev.low{background:rgba(255,255,255,.07);color:var(--mut);border:1px solid var(--line2)}
+.ev .who{font-size:13px;font-weight:600}
+.ev .tm{margin-left:auto;font-size:11.5px;color:var(--dim);font-family:"JetBrains Mono",monospace}
+.ev .r2{display:flex;gap:13px;flex-wrap:wrap;margin-top:7px;font-size:11.5px;color:var(--mut);font-family:"JetBrains Mono",monospace}
+.ev .r2 b{color:var(--ink);font-weight:600}
+.codes{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.code{font-size:10.5px;font-family:"JetBrains Mono",monospace;color:var(--violet);
+  background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.26);padding:2px 7px;border-radius:5px}
+.empty{padding:34px 18px;text-align:center;color:var(--dim);font-size:13px}
+
+/* detail */
+.detail{border-top:1px solid var(--line);padding:14px 15px;background:rgba(255,255,255,.02)}
+.detail h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600;margin-bottom:9px}
+#snapCv{border:1px solid var(--line);border-radius:9px;background:#0a0a0c}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 14px;margin-top:11px;font-size:12px;align-items:baseline}
+.kv .k{color:var(--dim)}
+.kv .v{font-family:"JetBrains Mono",monospace;text-align:right;white-space:nowrap}
+
+.note{margin-top:16px;border:1px solid rgba(245,158,11,.28);background:rgba(245,158,11,.06);
+  border-radius:12px;padding:14px 16px;font-size:13px;color:#e8dcc3;line-height:1.62}
+.note b{color:#fcd34d}
+.foot{margin-top:26px;padding-top:18px;border-top:1px solid var(--line);color:var(--dim);font-size:12.5px;line-height:1.7}
+
+@media(max-width:1080px){
+  .grid{grid-template-columns:1fr}
+  .intro h1{font-size:24px}
+}
+@media(max-width:560px){
+  .page{padding:16px 13px 44px}
+  .mets{grid-template-columns:1fr}
+  .st{min-width:50%}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="index.html" class="brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2 3.6 5.4v6.1c0 4.9 3.6 9.5 8.4 10.5 4.8-1 8.4-5.6 8.4-10.5V5.4L12 2Z" stroke="#ff6b1a" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="11.6" r="2.5" fill="#ff6b1a"/></svg>
+    SafeRoad<span>&nbsp;AI</span>
+  </a>
+  <span class="badge" data-i18n="badge">Симуляция · экспериментальные пороги</span>
+  <span class="sp"></span>
+  <a class="backlink" href="index.html"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="back">На сайт</span></a>
+  <div class="langs">
+    <button data-lang="ru" class="on">RU</button><button data-lang="uz">UZ</button><button data-lang="en">EN</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="intro">
+    <h1><span data-i18n="h1a">Как из обычного видео получается</span> <span class="it" data-i18n="h1b">измеримая опасность</span></h1>
+    <p data-i18n="lead">Слева — то, что видит камера. Справа — то, что видит система: метрическая плоскость дороги, траектории и физика конфликтов. Каждое событие внизу посчитано теми же формулами и с теми же порогами, что и в рабочем движке.</p>
+  </div>
+
+  <div class="pipe" id="pipe">
+    <div class="st" data-stage="0"><div class="n mono">01</div><div class="t" data-i18n="s0">Кадры и время</div></div>
+    <div class="st" data-stage="1"><div class="n mono">02</div><div class="t" data-i18n="s1">Детекция</div></div>
+    <div class="st" data-stage="2"><div class="n mono">03</div><div class="t" data-i18n="s2">Трекинг</div></div>
+    <div class="st" data-stage="3"><div class="n mono">04</div><div class="t" data-i18n="s3">Гомография</div></div>
+    <div class="st" data-stage="4"><div class="n mono">05</div><div class="t" data-i18n="s4">Фильтр Калмана</div></div>
+    <div class="st" data-stage="5"><div class="n mono">06</div><div class="t" data-i18n="s5">TTC / PET</div></div>
+    <div class="st" data-stage="6"><div class="n mono">07</div><div class="t" data-i18n="s6">Событие</div></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="hd">
+          <h3 data-i18n="camTitle">Вид с камеры</h3>
+          <div class="tg" style="margin-left:auto">
+            <button id="tBox" class="on" data-i18n="tBox">Боксы</button>
+            <button id="tId" class="on" data-i18n="tId">ID и класс</button>
+            <button id="tNight" class="on" data-i18n="tNight">Ночь</button>
+          </div>
+        </div>
+        <div class="cvwrap"><canvas id="cam"></canvas></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="hd">
+          <h3 data-i18n="gndTitle">Плоскость дороги (метры)</h3>
+          <div class="tg" style="margin-left:auto">
+            <button id="tTrail" class="on" data-i18n="tTrail">Траектории</button>
+            <button id="tHeat" class="on" data-i18n="tHeat">Тепловая карта</button>
+            <button id="tZone" data-i18n="tZone">Зоны конфликта</button>
+          </div>
+        </div>
+        <div class="cvwrap"><canvas id="gnd"></canvas></div>
+      </div>
+
+      <div class="ctl">
+        <div class="ctlrow">
+          <div class="pbtns">
+            <button class="pb p" id="play">
+              <svg id="playIco" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+              <span id="playTxt" data-i18n="pause">Пауза</span>
+            </button>
+            <button class="pb" id="step" data-i18n="step">Шаг</button>
+            <button class="pb" id="reset" data-i18n="reset">Сброс</button>
+          </div>
+          <div class="sl"><label><span data-i18n="cSpeed">Скорость показа</span><b id="vSpeed">1.0×</b></label><input type="range" id="rSpeed" min="0.25" max="3" step="0.25" value="1"></div>
+          <div class="sl"><label><span data-i18n="cTraffic">Поток машин</span><b id="vTraffic">средний</b></label><input type="range" id="rTraffic" min="0" max="100" step="1" value="45"></div>
+          <div class="sl"><label><span data-i18n="cPed">Пешеходы</span><b id="vPed">средне</b></label><input type="range" id="rPed" min="0" max="100" step="1" value="40"></div>
+        </div>
+        <div class="sep"></div>
+        <div class="ctlrow">
+          <div class="sl"><label><span data-i18n="cRisk">Доля нарушителей</span><b id="vRisk">25%</b></label><input type="range" id="rRisk" min="0" max="70" step="5" value="15"></div>
+          <div class="sl"><label><span data-i18n="cTtc">Порог TTC</span><b id="vTtc">2.0 с</b></label><input type="range" id="rTtc" min="0.5" max="4" step="0.1" value="2"></div>
+          <div class="sl"><label><span data-i18n="cPet">Порог PET</span><b id="vPet">1.5 с</b></label><input type="range" id="rPet" min="0.3" max="4" step="0.1" value="1.5"></div>
+          <div class="sl"><label><span data-i18n="cSep">Порог дистанции</span><b id="vSep">2.0 м</b></label><input type="range" id="rSep" min="0.5" max="5" step="0.1" value="2"></div>
+        </div>
+        <div class="sep"></div>
+        <div class="scen">
+          <span class="lbl" data-i18n="scenLbl">Сценарии</span>
+          <button class="sc" data-scen="ped"><i></i><span data-i18n="scen1">Пешеход вне перехода</span></button>
+          <button class="sc" data-scen="left"><i></i><span data-i18n="scen2">Левый поворот перед встречным</span></button>
+          <button class="sc" data-scen="rear"><i></i><span data-i18n="scen3">Резкое торможение</span></button>
+          <button class="sc" data-scen="red"><i></i><span data-i18n="scen4">Проезд на красный</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="hd"><h3 data-i18n="liveTitle">Живые метрики</h3><span class="sub mono" id="clock">00:00.0</span></div>
+        <div class="mets">
+          <div class="met" id="mTtc"><div class="k" data-i18n="mTtc">Мин. TTC сейчас</div><div class="v">—</div></div>
+          <div class="met" id="mSep"><div class="k" data-i18n="mSep">Мин. дистанция</div><div class="v">—</div></div>
+          <div class="met" id="mTracks"><div class="k" data-i18n="mTracks">Активных треков</div><div class="v">0</div></div>
+          <div class="met" id="mEv"><div class="k" data-i18n="mEv">Событий найдено</div><div class="v">0</div></div>
+          <div class="met" id="mRate"><div class="k" data-i18n="mRate">Конфликтов на 100 участников</div><div class="v">—</div></div>
+          <div class="met" id="mPass"><div class="k" data-i18n="mPass">Участников прошло</div><div class="v">0</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="hd"><h3 data-i18n="evTitle">Лента событий</h3><span class="sub" id="evSub" data-i18n="evSub">Нажмите на событие</span></div>
+        <div class="evwrap" id="evList"><div class="empty" data-i18n="evEmpty">Событий пока нет. Запустите сценарий или подождите — движок ждёт реального конфликта, а не рисует его по таймеру.</div></div>
+        <div class="detail" id="detail" style="display:none">
+          <h4 data-i18n="dTitle">Доказательство: геометрия конфликта</h4>
+          <canvas id="snapCv" width="320" height="190"></canvas>
+          <div class="kv" id="detailKv"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b data-i18n="noteB">Что это и чем это не является.</b>
+    <span data-i18n="noteT">Движение машин и пешеходов здесь синтетическое — это демонстрация метода, а не доказательство точности. Формулы TTC, PET, минимальной дистанции, правила подсчёта риска и веса reason codes взяты из профиля порогов experimental_v1 рабочего движка. В симуляции добавлен один порог, которого нет в движке: минимальная относительная скорость 1.5 м/с — без него пешеход, медленно обходящий стоящую машину, даёт бессмысленное «событие». Это находка симуляции, и её нужно перенести в движок. Пороги остаются экспериментальными до валидации на размеченном экспертами «золотом наборе». Оценка риска — индекс приоритизации, а не вероятность аварии. Попробуйте подвигать порог TTC: распределение severity меняется на глазах — именно поэтому пороги нельзя выбирать на глаз, их надо калибровать.</span>
+  </div>
+
+  <div class="foot">
+    <span data-i18n="foot">SafeRoad AI · Симуляция работает целиком в вашем браузере, ничего не отправляется на сервер. Без распознавания лиц и номеров — ни в симуляции, ни в системе.</span>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   SafeRoad AI — interactive method simulation.
+   The kinematics are synthetic. The safety math is NOT: TTC, PET,
+   separation, the reason-code weights and the severity bands are ported
+   1:1 from the engine's experimental_v1 threshold profile.
+   ===================================================================== */
+
+/* ------------------------------ i18n ------------------------------ */
+const I18N = {
+ ru:{badge:"Симуляция · экспериментальные пороги",back:"На сайт",
+  h1a:"Как из обычного видео получается",h1b:"измеримая опасность",
+  lead:"Слева — то, что видит камера. Справа — то, что видит система: метрическая плоскость дороги, траектории и физика конфликтов. Каждое событие внизу посчитано теми же формулами и с теми же порогами, что и в рабочем движке.",
+  s0:"Кадры и время",s1:"Детекция",s2:"Трекинг",s3:"Гомография",s4:"Фильтр Калмана",s5:"TTC / PET",s6:"Событие",
+  camTitle:"Вид с камеры",gndTitle:"Плоскость дороги (метры)",
+  tBox:"Боксы",tId:"ID и класс",tNight:"Ночь",tTrail:"Траектории",tHeat:"Тепловая карта",tZone:"Зоны конфликта",
+  pause:"Пауза",play:"Пуск",step:"Шаг",reset:"Сброс",
+  cSpeed:"Скорость показа",cTraffic:"Поток машин",cPed:"Пешеходы",cRisk:"Доля нарушителей",
+  cTtc:"Порог TTC",cPet:"Порог PET",cSep:"Порог дистанции",
+  scenLbl:"Сценарии",scen1:"Пешеход вне перехода",scen2:"Левый поворот перед встречным",scen3:"Резкое торможение",scen4:"Проезд на красный",
+  liveTitle:"Живые метрики",mTtc:"Мин. TTC сейчас",mSep:"Мин. дистанция",mTracks:"Активных треков",mEv:"Событий найдено",mRate:"Конфликтов на 100 участников",mPass:"Участников прошло",
+  evTitle:"Лента событий",evSub:"Нажмите на событие",
+  evEmpty:"Событий пока нет. Запустите сценарий или подождите — движок ждёт реального конфликта, а не рисует его по таймеру.",
+  dTitle:"Доказательство: геометрия конфликта",
+  noteB:"Что это и чем это не является.",
+  noteT:"Движение машин и пешеходов здесь синтетическое — это демонстрация метода, а не доказательство точности. Формулы TTC, PET, минимальной дистанции, правила подсчёта риска и веса reason codes взяты из профиля порогов experimental_v1 рабочего движка. В симуляции добавлен один порог, которого нет в движке: минимальная относительная скорость 1.5 м/с — без него пешеход, медленно обходящий стоящую машину, даёт бессмысленное «событие». Это находка симуляции, и её нужно перенести в движок. Пороги остаются экспериментальными до валидации на размеченном экспертами «золотом наборе». Оценка риска — индекс приоритизации, а не вероятность аварии. Попробуйте подвигать порог TTC: распределение severity меняется на глазах — именно поэтому пороги нельзя выбирать на глаз, их надо калибровать.",
+  foot:"SafeRoad AI · Симуляция работает целиком в вашем браузере, ничего не отправляется на сервер. Без распознавания лиц и номеров — ни в симуляции, ни в системе.",
+  car:"Автомобиль",person:"Пешеход",low:"низкий",mid:"средний",high:"высокий",none:"нет",
+  kScore:"Итоговый балл",kAngle:"Угол конфликта",kType:"Тип конфликта",kDur:"Длительность",kProfile:"Профиль порогов",
+  angRear:"попутный",angCross:"пересекающийся",angHead:"встречный",naS:"н/д"},
+
+ uz:{badge:"Simulyatsiya · eksperimental chegaralar",back:"Saytga",
+  h1a:"Oddiy videodan qanday qilib",h1b:"o'lchanadigan xavf chiqadi",
+  lead:"Chapda — kamera ko'rgani. O'ngda — tizim ko'rgani: yo'lning metrik tekisligi, trayektoriyalar va konflikt fizikasi. Quyidagi har bir hodisa ishchi dvigateldagi kabi formulalar va chegaralar bilan hisoblangan.",
+  s0:"Kadrlar va vaqt",s1:"Deteksiya",s2:"Treking",s3:"Gomografiya",s4:"Kalman filtri",s5:"TTC / PET",s6:"Hodisa",
+  camTitle:"Kamera ko'rinishi",gndTitle:"Yo'l tekisligi (metr)",
+  tBox:"Ramkalar",tId:"ID va sinf",tNight:"Tun",tTrail:"Trayektoriyalar",tHeat:"Issiqlik xaritasi",tZone:"Konflikt zonalari",
+  pause:"Pauza",play:"Ishga tushirish",step:"Qadam",reset:"Tiklash",
+  cSpeed:"Ko'rsatish tezligi",cTraffic:"Avtomobil oqimi",cPed:"Piyodalar",cRisk:"Qoidabuzarlar ulushi",
+  cTtc:"TTC chegarasi",cPet:"PET chegarasi",cSep:"Masofa chegarasi",
+  scenLbl:"Ssenariylar",scen1:"O'tish joyidan tashqari piyoda",scen2:"Qarshi oqim oldidan chapga burilish",scen3:"Keskin tormozlash",scen4:"Qizil chiroqda o'tish",
+  liveTitle:"Jonli ko'rsatkichlar",mTtc:"Hozirgi min. TTC",mSep:"Min. masofa",mTracks:"Faol treklar",mEv:"Topilgan hodisalar",mRate:"100 ishtirokchiga konfliktlar",mPass:"Ishtirokchi o‘tdi",
+  evTitle:"Hodisalar lentasi",evSub:"Hodisani bosing",
+  evEmpty:"Hozircha hodisa yo'q. Ssenariyni ishga tushiring yoki kuting — dvigatel taymer bo'yicha chizmaydi, haqiqiy konfliktni kutadi.",
+  dTitle:"Dalil: konflikt geometriyasi",
+  noteB:"Bu nima va nima emas.",
+  noteT:"Bu yerdagi harakat sintetik — bu usul namoyishi, aniqlik isboti emas. TTC, PET, minimal masofa formulalari, xavf balini hisoblash qoidalari va reason code og'irliklari ishchi dvigatelning experimental_v1 profilidan olingan. Simulyatsiyaga dvigatelda yo'q bitta chegara qo'shilgan: minimal nisbiy tezlik 1.5 m/s. Chegaralar ekspertlar tomonidan belgilangan «oltin to'plam»da tasdiqlanmaguncha eksperimental bo'lib qoladi. Xavf bahosi — bu ustuvorlik indeksi, avariya ehtimoli emas.",
+  foot:"SafeRoad AI · Simulyatsiya to'liq brauzeringizda ishlaydi, serverga hech narsa yuborilmaydi. Yuz va raqamlarni tanish yo'q — na simulyatsiyada, na tizimda.",
+  car:"Avtomobil",person:"Piyoda",low:"past",mid:"o'rta",high:"yuqori",none:"yo'q",
+  kScore:"Yakuniy ball",kAngle:"Konflikt burchagi",kType:"Konflikt turi",kDur:"Davomiyligi",kProfile:"Chegaralar profili",
+  angRear:"orqadan",angCross:"kesishuvchi",angHead:"qarama-qarshi",naS:"m/y"},
+
+ en:{badge:"Simulation · experimental thresholds",back:"Back to site",
+  h1a:"How ordinary video becomes",h1b:"measurable danger",
+  lead:"On the left, what the camera sees. On the right, what the system sees: the metric road plane, trajectories and conflict physics. Every event below is computed with the same formulas and thresholds as the production engine.",
+  s0:"Frames & time",s1:"Detection",s2:"Tracking",s3:"Homography",s4:"Kalman filter",s5:"TTC / PET",s6:"Event",
+  camTitle:"Camera view",gndTitle:"Road plane (metres)",
+  tBox:"Boxes",tId:"ID & class",tNight:"Night",tTrail:"Trajectories",tHeat:"Heatmap",tZone:"Conflict zones",
+  pause:"Pause",play:"Play",step:"Step",reset:"Reset",
+  cSpeed:"Playback speed",cTraffic:"Vehicle flow",cPed:"Pedestrians",cRisk:"Share of violators",
+  cTtc:"TTC threshold",cPet:"PET threshold",cSep:"Separation threshold",
+  scenLbl:"Scenarios",scen1:"Pedestrian outside crossing",scen2:"Left turn across oncoming",scen3:"Hard braking",scen4:"Red-light running",
+  liveTitle:"Live metrics",mTtc:"Min TTC now",mSep:"Min separation",mTracks:"Active tracks",mEv:"Events found",mRate:"Conflicts per 100 road users",mPass:"Road users passed",
+  evTitle:"Event feed",evSub:"Click an event",
+  evEmpty:"No events yet. Launch a scenario or wait — the engine waits for a real conflict instead of drawing one on a timer.",
+  dTitle:"Evidence: conflict geometry",
+  noteB:"What this is and is not.",
+  noteT:"The motion here is synthetic — this demonstrates the method, it does not prove accuracy. The TTC, PET and separation formulas, the risk scoring rules and the reason-code weights come from the production engine's experimental_v1 threshold profile. The simulation adds one gate the engine does not have: a minimum relative speed of 1.5 m/s, without which a pedestrian easing past a stopped car produces a meaningless «event» — a finding worth porting back. Thresholds stay experimental until validated against an expert-labelled golden set. The risk score is a prioritisation index, never an accident probability.",
+  foot:"SafeRoad AI · The simulation runs entirely in your browser; nothing is sent to a server. No face or licence-plate recognition — not in the simulation, not in the system.",
+  car:"Vehicle",person:"Pedestrian",low:"low",mid:"medium",high:"high",none:"none",
+  kScore:"Total score",kAngle:"Conflict angle",kType:"Conflict type",kDur:"Duration",kProfile:"Threshold profile",
+  angRear:"rear-end",angCross:"crossing",angHead:"head-on",naS:"n/a"}
+};
+let LANG = "ru";
+const T = k => (I18N[LANG][k] !== undefined ? I18N[LANG][k] : (I18N.ru[k] || k));
+
+/* --------------------- threshold profile (ported) --------------------- */
+const RULES = {
+  profile_id: "experimental_v1",
+  ttc_trigger_s: 2.0, pet_trigger_s: 1.5, separation_trigger_m: 2.0,
+  rel_speed_bonus_mps: 8.0, hard_braking_window_s: 3.0,
+  min_rel_speed_mps: 1.5,   // added here: two near-stationary bodies are not a conflict
+  weights: { low_ttc:3.0, very_low_ttc:2.0, low_pet:2.5, very_low_pet:2.0,
+             simultaneous_occupancy:3.5, low_separation:2.0, high_rel_speed:1.5,
+             pedestrian_involved:2.0, two_wheeler_involved:1.5, hard_braking_near_conflict:1.5 },
+  bands: { critical:7.0, high:5.0, medium:3.0, low:1.5 }
+};
+
+/* ----------------------------- geometry ----------------------------- */
+const LANE = 3.5, HALF = 7.0, FAR = 46, CW0 = 8.6, CW1 = 10.2;
+let _seed = 20260818;
+function rnd(){ _seed |= 0; _seed = (_seed + 0x6D2B79F5) | 0;
+  let t = Math.imul(_seed ^ (_seed >>> 15), 1 | _seed);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+
+function bez(p0,p1,p2,n){const o=[];for(let i=1;i<=n;i++){const t=i/n,m=1-t;
+  o.push([m*m*p0[0]+2*m*t*p1[0]+t*t*p2[0], m*m*p0[1]+2*m*t*p1[1]+t*t*p2[1]]);}return o;}
+
+// approach: entry heading; pre = stop-line point; ctrl = turn control point
+const APPROACH = {
+  S:{ hdg:[0,1],  pre:[ LANE,-HALF], axis:"NS",
+      straight:[[ LANE, FAR]],
+      right:{ctrl:[ LANE,-LANE], post:[ HALF,-LANE], exit:[ FAR,-LANE]},
+      left :{ctrl:[ LANE, LANE], post:[-HALF, LANE], exit:[-FAR, LANE]} },
+  N:{ hdg:[0,-1], pre:[-LANE, HALF], axis:"NS",
+      straight:[[-LANE,-FAR]],
+      right:{ctrl:[-LANE, LANE], post:[-HALF, LANE], exit:[-FAR, LANE]},
+      left :{ctrl:[-LANE,-LANE], post:[ HALF,-LANE], exit:[ FAR,-LANE]} },
+  E:{ hdg:[-1,0], pre:[ HALF, LANE], axis:"EW",
+      straight:[[-FAR, LANE]],
+      right:{ctrl:[ LANE, LANE], post:[ LANE, HALF], exit:[ LANE, FAR]},
+      left :{ctrl:[-LANE, LANE], post:[-LANE,-HALF], exit:[-LANE,-FAR]} },
+  W:{ hdg:[1,0],  pre:[-HALF,-LANE], axis:"EW",
+      straight:[[ FAR,-LANE]],
+      right:{ctrl:[-LANE,-LANE], post:[-LANE,-HALF], exit:[-LANE,-FAR]},
+      left :{ctrl:[ LANE,-LANE], post:[ LANE, HALF], exit:[ LANE, FAR]} }
+};
+
+function buildRoute(app, man){
+  const A = APPROACH[app];
+  const entry = [A.pre[0]-A.hdg[0]*(FAR-HALF), A.pre[1]-A.hdg[1]*(FAR-HALF)];
+  let pts = [entry, A.pre.slice()];
+  if (man === "straight") pts = pts.concat(A.straight.map(p=>p.slice()));
+  else { const m = A[man]; pts = pts.concat(bez(A.pre, m.ctrl, m.post, 14)); pts.push(m.exit.slice()); }
+  return pts;
+}
+function offsetPath(pts, off){          // drivers do not track the lane centre exactly
+  if(!off) return pts;
+  return pts.map((p,i)=>{
+    const q = pts[Math.min(i+1,pts.length-1)], r = pts[Math.max(i-1,0)];
+    let dx=q[0]-r[0], dy=q[1]-r[1]; const n=Math.hypot(dx,dy)||1; dx/=n; dy/=n;
+    return [p[0]-dy*off, p[1]+dx*off];
+  });
+}
+function polyline(pts){
+  const cum=[0]; let L=0;
+  for(let i=1;i<pts.length;i++){ L+=dist(pts[i-1],pts[i]); cum.push(L); }
+  return {pts, cum, len:L};
+}
+function atS(pl, s){
+  const {pts,cum}=pl; s=clamp(s,0,pl.len);
+  let i=1; while(i<cum.length-1 && cum[i]<s) i++;
+  const t=(s-cum[i-1])/Math.max(1e-6,(cum[i]-cum[i-1]));
+  const p=[pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t];
+  let dx=pts[i][0]-pts[i-1][0], dy=pts[i][1]-pts[i-1][1];
+  const n=Math.hypot(dx,dy)||1;
+  return {p, h:[dx/n, dy/n]};
+}
+
+/* ------------------------------ state ------------------------------ */
+const S = {
+  t:0, running:true, speed:1, nextId:1,
+  agents:[], events:[], pairs:new Map(), cells:new Map(),
+  heat:[], spawnCar:0, spawnPed:0,
+  traffic:0.45, ped:0.40, risk:0.25,
+  ttcTh:2.0, petTh:1.5, sepTh:2.0,
+  live:{ttc:null, sep:null, pairA:null, pairB:null}, passed:0,
+  sel:null, stage:0, stageT:0, flash:0, phaseOff:0, queue:[], pending:null
+};
+/* signal plan with a real all-red clearance interval — without it, traffic that is
+   still inside the box meets the cross flow the instant it turns green            */
+const T_G=14, T_Y=3, T_AR=2.5, CYCLE=2*(T_G+T_Y+T_AR);
+function phase(){ const t=(S.t+S.phaseOff)%CYCLE;
+  if(t < T_G) return {NS:"g",EW:"r"};
+  if(t < T_G+T_Y) return {NS:"y",EW:"r"};
+  if(t < T_G+T_Y+T_AR) return {NS:"r",EW:"r"};
+  if(t < 2*T_G+T_Y+T_AR) return {NS:"r",EW:"g"};
+  if(t < 2*T_G+2*T_Y+T_AR) return {NS:"r",EW:"y"};
+  return {NS:"r",EW:"r"};
+}
+
+/* ------------------------------ agents ------------------------------ */
+function spawnCar(opts){
+  opts = opts || {};
+  const app = opts.app || ["N","S","E","W"][(rnd()*4)|0];
+  const r = rnd();
+  const man = opts.man || (r<0.62?"straight":(r<0.81?"right":"left"));
+  const route = polyline(offsetPath(buildRoute(app, man), (rnd()-0.5)*0.9));
+  const A = APPROACH[app];
+  // arclength of the stop line = distance from entry to pre
+  const sStop = dist(route.pts[0], A.pre);
+  const violator = opts.violator !== undefined ? opts.violator : (rnd() < S.risk);
+  const big = rnd() < 0.16;
+  const a = {
+    id:S.nextId++, kind:"car", cls: big ? "truck" : "car",
+    route, s: opts.s || 0, sStop, app, man, axis:A.axis,
+    len: big?7.4:4.5, wid: big?2.5:1.82, hgt: big?3.0:1.5, rad: big?2.6:1.75,
+    speed: opts.speed !== undefined ? opts.speed : (9.5 + rnd()*4.5),
+    vmax: opts.vmax !== undefined ? opts.vmax : (10.5 + rnd()*4.5),
+    turnSpeed: man==="straight" ? 99 : (man==="right" ? 5.2 : 6.4),
+    acc: 2.0 + rnd()*0.8, attentive: !violator, redRun: violator && rnd()<0.3,
+    conf: 0.83 + rnd()*0.15, trail:[], accel:0, hardBrakeT:-99, script:opts.script||null,
+    p:[0,0], h:[1,0], v:[0,0], hot:0
+  };
+  const st = atS(route, a.s); a.p = st.p; a.h = st.h;
+  S.agents.push(a); return a;
+}
+function spawnPed(opts){
+  opts = opts || {};
+  const jay = opts.jay !== undefined ? opts.jay : (rnd() < S.risk*0.45);
+  let pts, axis;
+  if (opts.pts) { pts = opts.pts; axis = opts.axis; }
+  else if (jay) {
+    // crosses the roadway away from the marked crossing
+    if (rnd()<0.5){ axis="NS"; const y=(rnd()*11-5.5); const d=rnd()<0.5?1:-1;
+      pts=[[-13*d, y],[13*d, y]]; }
+    else { axis="EW"; const x=(rnd()*11-5.5); const d=rnd()<0.5?1:-1;
+      pts=[[x,-13*d],[x,13*d]]; }
+  } else {
+    const cw = (CW0+CW1)/2;
+    if (rnd()<0.5){ axis="NS"; const y=(rnd()<0.5?cw:-cw); const d=rnd()<0.5?1:-1;
+      pts=[[-11*d, y],[11*d, y]]; }
+    else { axis="EW"; const x=(rnd()<0.5?cw:-cw); const d=rnd()<0.5?1:-1;
+      pts=[[x,-11*d],[x,11*d]]; }
+  }
+  const route = polyline(pts);
+  // arclength at which the walker steps onto the roadway
+  let sWait = 0;
+  for (let s=0; s<route.len; s+=0.4){ const q=atS(route,s).p;
+    if (Math.abs(axis==="NS"?q[0]:q[1]) <= HALF+0.4){ sWait = Math.max(0, s-0.6); break; } }
+  const a = {
+    id:S.nextId++, kind:"ped", cls:"person", route, s: opts.s||0, axis, jay, sWait,
+    len:0.6, wid:0.55, hgt:1.72, rad:0.36,
+    speed: opts.speed !== undefined ? opts.speed : (1.15+rnd()*0.5),
+    vmax: opts.vmax !== undefined ? opts.vmax : (1.15+rnd()*0.5),
+    acc:1.4, attentive:!jay, conf:0.71+rnd()*0.2,
+    trail:[], accel:0, hardBrakeT:-99, p:[0,0], h:[1,0], v:[0,0], hot:0
+  };
+  const st=atS(route,a.s); a.p=st.p; a.h=st.h;
+  S.agents.push(a); return a;
+}
+
+function leadGap(a){
+  let best=null;
+  for (const o of S.agents){
+    if (o===a || o.kind!=="car") continue;
+    const rx=o.p[0]-a.p[0], ry=o.p[1]-a.p[1];
+    const along = rx*a.h[0]+ry*a.h[1];
+    const lat = Math.abs(-rx*a.h[1]+ry*a.h[0]);
+    // also catch a vehicle merging into our lane out of a turn, not just one already in it
+    if (along>0 && along<26 && lat<(angDeg(a.h,o.h)<32 ? 3.2 : 2.0)){ if(!best||along<best) best=along; }
+  }
+  return best;
+}
+function hazardGap(a){
+  let best=null;
+  for (const o of S.agents){
+    if (o===a || o.kind!=="ped") continue;
+    const rx=o.p[0]-a.p[0], ry=o.p[1]-a.p[1];
+    const along = rx*a.h[0]+ry*a.h[1];
+    const lat = Math.abs(-rx*a.h[1]+ry*a.h[0]);
+    if (along>0 && along<24 && lat<3.0){ if(!best||along<best) best=along; }
+  }
+  return best;
+}
+
+function updateAgent(a, dt){
+  let tgt = a.vmax;
+  if (a.script) { const r = a.script(a, dt); if (r !== undefined) tgt = r; }
+  if (a.kind === "car"){
+    if (a.man !== "straight"){
+      const near = a.s > a.sStop-6 && a.s < a.sStop + 22;
+      if (near) tgt = Math.min(tgt, a.turnSpeed);
+    }
+    const ph = phase()[a.axis];
+    if (!a.redRun && a.s < a.sStop - 0.2){
+      const d = a.sStop - a.s;
+      const stopNeeded = (a.speed*a.speed)/(2*3.2);
+      if (ph==="r" || (ph==="y" && d > stopNeeded)) tgt = Math.min(tgt, Math.sqrt(2*1.7*Math.max(0,d-1.6)));
+    }
+    const lead = leadGap(a);
+    if (lead !== null) tgt = Math.min(tgt, Math.sqrt(2*1.7*Math.max(0,lead - (a.len*0.5+5.8))));
+    const hz = hazardGap(a);
+    if (hz !== null){                    // hz is centre-to-centre; stop with real clearance
+      const clr = a.len/2 + 0.35 + (a.attentive ? 4.8 : 1.5);
+      tgt = Math.min(tgt, a.attentive ? Math.sqrt(2*1.35*Math.max(0,hz-clr)) : Math.sqrt(2*4.6*Math.max(0,hz-clr)));
+    }
+  } else {
+    {                       // wait at the kerb for a bearing-down vehicle; if already
+      const look = a.attentive ? 2.6 : 1.5;   // on the roadway, hurry across instead of freezing
+      for(const o of S.agents){ if(o.kind!=="car") continue;
+        if(Math.hypot(o.p[0]-a.p[0],o.p[1]-a.p[1])>30) continue;
+        const tc=ttcOf(o,a);
+        if(tc!==null && tc<look){ tgt = (a.s < a.sWait+0.6) ? 0 : a.vmax*2.0; break; } }
+    }
+    for(const o of S.agents){                // do not walk into a stopped body
+      if(o===a) continue;
+      const rx=o.p[0]-a.p[0], ry=o.p[1]-a.p[1];
+      if(rx*a.h[0]+ry*a.h[1] <= 0) continue;
+      if(Math.abs(-rx*a.h[1]+ry*a.h[0]) > (o.wid/2+0.6)) continue;
+      if(pairSep(a,o) < 1.3){ tgt = 0; break; }
+    }
+    if (!a.jay && a.s < a.sWait){
+      const ph = phase()[a.axis];   // ped crossing the NS road waits while NS traffic has green
+      if (ph !== "r") tgt = Math.min(tgt, Math.sqrt(2*1.2*Math.max(0,a.sWait-a.s-0.3)));
+    }
+  }
+  if(a.override){ const r=a.override(a); if(r!==undefined) tgt=r; }
+  // deadlock breaker: two road users can block each other; the lower id edges out first
+  const stuck = (a.stall||0) > 2.5 && (!a.blockedBy || a.id < a.blockedBy);
+  // last-resort avoidance: nobody in this world actually crashes, they only come close.
+  // an inattentive driver simply reacts much later, which is what produces the near-miss.
+  if(a.kind==="car"){
+    const react = a.attentive ? 4.2 : 2.4;
+    for(const o of S.agents){
+      if(o===a) continue;
+      const rx=o.p[0]-a.p[0], ry=o.p[1]-a.p[1];
+      if(rx*a.h[0]+ry*a.h[1] < -1.5) continue;         // behind us
+      if(Math.hypot(rx,ry) > 34) continue;
+      const tc=ttcOf(a,o);
+      if(tc!==null && tc<react){ tgt=0; break; }
+    }
+    if(stuck) tgt=Math.max(tgt,1.8);
+  }
+  const amax = a.kind==="car" ? a.acc : a.acc;
+  const amin = a.kind==="car" ? -7.6 : -3.2;
+  let acc = clamp((tgt - a.speed)/Math.max(dt,1e-3), amin, amax);
+  a.accel = acc;
+  if (a.kind==="car" && acc < -3.0) a.hardBrakeT = S.t;
+  a.speed = Math.max(0, a.speed + acc*dt);
+  const sPrev=a.s, pPrev=a.p;
+  a.s += a.speed*dt;
+  let st = atS(a.route, a.s);
+  // hard guard: footprints never interpenetrate
+  for(const o of S.agents){
+    if(o===a) continue;
+    if(Math.hypot(o.p[0]-st.p[0], o.p[1]-st.p[1]) > a.len/2+o.len/2+1.2) continue;
+    const save=a.p; a.p=st.p; a._dt=-1;
+    const ov=pairSep(a,o); a.p=save; a._dt=-1;
+    if(ov<0.05){
+      const rx=o.p[0]-pPrev[0], ry=o.p[1]-pPrev[1];
+      if(rx*a.h[0]+ry*a.h[1] > -0.2){ a.s=sPrev; st=atS(a.route,a.s); a.speed=0; a.accel=Math.min(a.accel,-6); a.blockedBy=o.id; }
+      break;
+    }
+  }
+  a.p = st.p; a.h = st.h;
+  const waitingAtKerb = a.kind==="ped" && a.s < a.sWait+0.6;
+  if(a.speed<0.15 && !waitingAtKerb){ a.stall=(a.stall||0)+dt; } else { a.stall=0; a.blockedBy=null; }
+  a.v = [a.h[0]*a.speed, a.h[1]*a.speed];
+  if (S.t - (a._trailT||0) > 0.12){ a._trailT=S.t; a.trail.push([a.p[0],a.p[1]]); if(a.trail.length>30) a.trail.shift(); }
+  a.hot = Math.max(0, a.hot - dt*1.6);
+  a.dead = a.s >= a.route.len - 0.05 || (a.stall||0) > 14;
+}
+
+/* --------------------------- safety math --------------------------- */
+const CELL = 1.5, CELL_R = 14;
+function cellsOf(a){
+  // a cell belongs to the zone if the footprint overlaps it, not only if it
+  // contains the cell centre — otherwise narrow bodies fall between cells
+  const out=[]; const hl=a.len/2+0.4, hw=a.wid/2+0.4;
+  const cx=a.p[0], cy=a.p[1], hx=a.h[0], hy=a.h[1];
+  const r=Math.max(hl,hw)+CELL;
+  const i0=Math.floor((cx-r)/CELL), i1=Math.ceil((cx+r)/CELL);
+  const j0=Math.floor((cy-r)/CELL), j1=Math.ceil((cy+r)/CELL);
+  for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){
+    if(Math.abs(i)>CELL_R||Math.abs(j)>CELL_R) continue;
+    const px=(i+0.5)*CELL-cx, py=(j+0.5)*CELL-cy;
+    const along=px*hx+py*hy, lat=-px*hy+py*hx;
+    if(Math.abs(along)<=hl && Math.abs(lat)<=hw) out.push(i*1000+j);
+  }
+  return out;
+}
+const angDeg=(h1,h2)=>Math.acos(clamp(h1[0]*h2[0]+h1[1]*h2[1],-1,1))*180/Math.PI;
+const pairKey=(a,b)=> a.id<b.id ? a.id+"-"+b.id : b.id+"-"+a.id;
+
+function getPair(a,b){
+  const k=pairKey(a,b);
+  let p=S.pairs.get(k);
+  if(!p){ p={k, a, b, aCls:a.cls, bCls:b.cls, minTTC:null, tTTC:null, minSep:null, tSep:null,
+    relSpeed:null, minPET:null, petZone:null, simul:false, angle:null,
+    tStart:S.t, last:S.t, snap:null}; S.pairs.set(k,p); }
+  return p;
+}
+
+/* A road user is approximated by 1-3 discs along its length, so separation and
+   TTC are measured between bodies rather than between inflated circles.        */
+function discsOf(a){
+  if(a._dt===S.t && a._discs) return a._discs;
+  const r=a.wid/2+0.08, out=[];
+  if(a.kind==="ped") out.push([a.p[0],a.p[1],a.rad]);
+  else{
+    const n = a.len>6 ? 3 : 2, span=(a.len/2-r);
+    for(let i=0;i<n;i++){ const f=(n===1?0:(-1+2*i/(n-1)))*span;
+      out.push([a.p[0]+a.h[0]*f, a.p[1]+a.h[1]*f, r]); }
+  }
+  a._discs=out; a._dt=S.t; return out;
+}
+function pairSep(a,b){
+  const A=discsOf(a), B=discsOf(b); let m=1e9;
+  for(const u of A) for(const w of B){
+    const d=Math.hypot(u[0]-w[0],u[1]-w[1])-u[2]-w[2];
+    if(d<m) m=d; }
+  return Math.max(0,m);
+}
+function ttcOf(a,b){
+  const dvx=b.v[0]-a.v[0], dvy=b.v[1]-a.v[1];
+  const A2=dvx*dvx+dvy*dvy;
+  if(A2<1e-6) return null;
+  const A=discsOf(a), B=discsOf(b); let best=null;
+  for(const u of A) for(const w of B){
+    const dpx=w[0]-u[0], dpy=w[1]-u[1], R=u[2]+w[2];
+    const Bq=2*(dpx*dvx+dpy*dvy), Cq=dpx*dpx+dpy*dpy-R*R;
+    if(Cq<=0) return 0;
+    const D=Bq*Bq-4*A2*Cq;
+    if(D<=0) continue;
+    const t=(-Bq-Math.sqrt(D))/(2*A2);
+    if(t>0 && t<12 && (best===null||t<best)) best=t;
+  }
+  return best;
+}
+
+function safetyTick(dt){
+  // --- pairwise TTC / separation over observed motion ---
+  const n=S.agents.length;
+  let liveTTC=null, liveSep=null, liveA=null, liveB=null;
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const a=S.agents[i], b=S.agents[j];
+    if(a.kind==="ped" && b.kind==="ped") continue;   // conflict analysis is vehicle-involved
+    const d=dist(a.p,b.p);
+    if(d>42) continue;
+    const gap=pairSep(a,b);
+    const ttc=ttcOf(a,b);
+    if(gap>18 && ttc===null) continue;
+    const p=getPair(a,b); p.last=S.t;
+    if(ttc!==null && (p.minTTC===null || ttc<p.minTTC)){ p.minTTC=ttc; p.tTTC=S.t; }
+    if(p.minSep===null || gap<p.minSep){
+      p.minSep=gap; p.tSep=S.t;
+      p.relSpeed=Math.hypot(b.v[0]-a.v[0], b.v[1]-a.v[1]);
+      p.angle=angDeg(a.h,b.h);
+      p.snap={ ax:a.p.slice(), bx:b.p.slice(), ah:a.h.slice(), bh:b.h.slice(),
+               at:a.trail.slice(-16), bt:b.trail.slice(-16),
+               aCls:a.cls, bCls:b.cls, aId:a.id, bId:b.id,
+               aSp:a.speed, bSp:b.speed };
+    }
+    if(ttc!==null && ttc<S.ttcTh){ a.hot=1; b.hot=1; }
+    if(ttc!==null && (liveTTC===null||ttc<liveTTC)){ liveTTC=ttc; liveA=a; liveB=b; }
+    if(liveSep===null||gap<liveSep) liveSep=gap;
+  }
+  S.live={ttc:liveTTC, sep:liveSep, pairA:liveA, pairB:liveB};
+
+  // --- conflict-zone occupancy -> PET / simultaneous occupancy ---
+  for(const a of S.agents){
+    const cur=cellsOf(a), prev=a._cells||[];
+    const curSet=new Set(cur);
+    for(const c of cur){
+      if(prev.indexOf(c)>=0) continue;                 // already inside
+      let st=S.cells.get(c);
+      if(!st){ st={occ:new Set(), lastId:null, lastExit:-99, lastH:[1,0], lastCls:null}; S.cells.set(c,st); }
+      for(const oid of st.occ){
+        const o=S.agents.find(x=>x.id===oid);
+        if(o && angDeg(a.h,o.h)>=20){ const p=getPair(a,o); p.simul=true; p.petZone=c; p.last=S.t; }
+      }
+      if(st.lastId!==null && st.lastId!==a.id && angDeg(a.h,st.lastH)>=20){
+        const o=S.agents.find(x=>x.id===st.lastId);
+        const pet=S.t-st.lastExit;
+        if(o && pet<=6){ const p=getPair(a,o);
+          if(p.minPET===null||pet<p.minPET){ p.minPET=pet; p.petZone=c; }
+          p.last=S.t; }
+      }
+      st.occ.add(a.id);
+    }
+    for(const c of prev){
+      if(curSet.has(c)) continue;
+      const st=S.cells.get(c);
+      if(st){ st.occ.delete(a.id); st.lastId=a.id; st.lastExit=S.t; st.lastH=a.h.slice(); st.lastCls=a.cls; }
+    }
+    a._cells=cur;
+  }
+
+  // --- finalise stale pairs ---
+  for(const [k,p] of S.pairs){
+    if(S.t-p.last>1.2 || p.a.dead || p.b.dead){ S.pairs.delete(k); scorePair(p); }
+  }
+}
+
+/* ------------- scoring: ported 1:1 from safety/nearmiss.py ------------- */
+function scorePair(p){
+  // engine parity: pairs that never came near a shared conflict zone are not analysable
+  if(p.aCls==="person" && p.bCls==="person") return;   // vehicle-involved conflicts only
+  const analyzable = p.simul || p.minPET!==null || (p.minSep!==null && p.minSep<8.0);
+  if(!analyzable) return;
+  // two bodies that are barely moving relative to each other are not a conflict,
+  // whatever the geometry says (a walker easing past a stopped car is not a near-miss)
+  if(p.relSpeed!==null && p.relSpeed < RULES.min_rel_speed_mps) return;
+  const W=RULES.weights, codes=[]; let score=0;
+  const ttcTrig=S.ttcTh, petTrig=S.petTh, sepTrig=S.sepTh;
+  if(p.minTTC!==null && p.minTTC<ttcTrig){
+    codes.push("low_ttc"); score+=W.low_ttc;
+    if(p.minTTC<1.0){ codes.push("very_low_ttc"); score+=W.very_low_ttc; }
+  }
+  if(p.simul){ codes.push("simultaneous_occupancy"); score+=W.simultaneous_occupancy; }
+  else if(p.minPET!==null && p.minPET<petTrig){
+    codes.push("low_pet"); score+=W.low_pet;
+    if(p.minPET<0.5){ codes.push("very_low_pet"); score+=W.very_low_pet; }
+  }
+  if(p.minSep!==null && p.minSep<sepTrig){ codes.push("low_separation"); score+=W.low_separation; }
+  if(codes.length===0) return;                       // nothing kinematic fired
+  if(p.relSpeed!==null && p.relSpeed>RULES.rel_speed_bonus_mps){
+    codes.push("high_rel_speed"); score+=W.high_rel_speed; }
+  const cls=[p.aCls,p.bCls];
+  if(cls.indexOf("person")>=0){ codes.push("pedestrian_involved"); score+=W.pedestrian_involved; }
+  if(cls.indexOf("motorcycle")>=0||cls.indexOf("bicycle")>=0){
+    codes.push("two_wheeler_involved"); score+=W.two_wheeler_involved; }
+  const anchor = p.tSep!==null ? p.tSep : (p.tTTC||S.t);
+  for(const ag of [p.a,p.b]){
+    if(Math.abs(ag.hardBrakeT-anchor)<=RULES.hard_braking_window_s){
+      codes.push("hard_braking_near_conflict"); score+=W.hard_braking_near_conflict; break; } }
+  let sev=null; const B=RULES.bands;
+  if(score>=B.critical) sev="critical"; else if(score>=B.high) sev="high";
+  else if(score>=B.medium) sev="medium"; else if(score>=B.low) sev="low";
+  if(!sev) return;
+
+  const ev={ id:"ev_"+(S.events.length+1).toString().padStart(3,"0"),
+    t:anchor, tStart:p.tStart, tEnd:S.t, sev, score:+score.toFixed(1), codes,
+    ttc:p.minTTC, pet:p.simul?0:p.minPET, sep:p.minSep, rel:p.relSpeed,
+    angle:p.angle, aCls:p.aCls, bCls:p.bCls, aId:p.a.id, bId:p.b.id,
+    zone:p.petZone, snap:p.snap, simul:p.simul };
+  S.events.unshift(ev);
+  if(S.events.length>60) S.events.pop();
+  if(S.heat.length>45) S.heat.shift();
+  if(ev.snap) S.heat.push({x:(ev.snap.ax[0]+ev.snap.bx[0])/2, y:(ev.snap.ax[1]+ev.snap.bx[1])/2, sev});
+  S.flash=1; S.stage=6;
+  renderEvents();
+}
+
+/* ----------------------------- scenarios ----------------------------- */
+function closestS(route, target){
+  let bs=0, bd=1e9;
+  for(let s=0;s<=route.len;s+=0.5){ const q=atS(route,s).p; const d=dist(q,target);
+    if(d<bd){bd=d;bs=s;} }
+  return bs;
+}
+function forcePhase(axisGreen, minLeft){
+  // rewind the signal so the requested axis has green with >= minLeft seconds left
+  const want = axisGreen==="NS" ? 1.0 : (T_G+T_Y+T_AR+1.0);   // seconds into the cycle
+  S.phaseOff = (want - (S.t % CYCLE) + CYCLE) % CYCLE;
+}
+function nearestPed(a, maxAlong, maxLat){
+  let best=null, bd=1e9;
+  for(const o of S.agents){ if(o.kind!=="ped") continue;
+    const rx=o.p[0]-a.p[0], ry=o.p[1]-a.p[1];
+    const along=rx*a.h[0]+ry*a.h[1], lat=Math.abs(-rx*a.h[1]+ry*a.h[0]);
+    if(along>0&&along<maxAlong&&lat<maxLat&&along<bd){bd=along;best=o;} }
+  return best?{o:best,along:bd}:null;
+}
+
+function runScenario(name){
+  S.pending=null;
+  if(name==="ped"){
+    forcePhase("NS", 12);
+    const ped = spawnPed({ pts:[[-12,0.6],[13,0.6]], axis:"NS", jay:true, speed:1.42, vmax:1.42 });
+    S.pending = { conf:[LANE,0.6], A:ped, gap:0.62, vB:13.2, make:()=>{
+      const c = spawnCar({ app:"S", man:"straight", violator:true, vmax:13.2, speed:13.2 });
+      c.redRun=true; c.attentive=false;
+      c.override=(x)=>{ const h=nearestPed(x,14,2.6); if(h) return 0; };
+      return c; } };
+  }
+  else if(name==="left"){
+    forcePhase("NS", 14);
+    const turn = spawnCar({ app:"S", man:"left", violator:true, vmax:9.5, speed:9.5 });
+    turn.attentive=false; turn.redRun=true;
+    S.pending = { conf:[-LANE,LANE], A:turn, gap:0.75, vB:13.6, make:()=>{
+      const c = spawnCar({ app:"N", man:"straight", violator:false, vmax:13.6, speed:13.6 });
+      c.redRun=true; return c; } };
+  }
+  else if(name==="rear"){
+    forcePhase("EW", 14);
+    const lead = spawnCar({ app:"W", man:"straight", violator:false, vmax:13.5, speed:13.5, s:20 });
+    lead.redRun=true;
+    lead.override=(x)=>{ if(x.p[0]>-16 && x.p[0]<-4) return 0.5; };
+    const foll = spawnCar({ app:"W", man:"straight", violator:true, vmax:14.5, speed:14.5, s:1 });
+    foll.redRun=true;
+    foll.override=(x)=>{ const d=lead.dead?99:(dist(x.p,lead.p)); return d>13.5 ? x.vmax : 0; };
+  }
+  else if(name==="red"){
+    forcePhase("NS", 14);
+    const runner = spawnCar({ app:"W", man:"straight", violator:true, vmax:14.2, speed:14.2 });
+    runner.redRun=true; runner.attentive=false;
+    S.pending = { conf:[LANE,-LANE], A:runner, gap:0.6, vB:12.6, make:()=>{
+      const c = spawnCar({ app:"S", man:"straight", violator:false, vmax:12.6, speed:12.6 });
+      c.redRun=true; return c; } };
+  }
+}
+function tickPending(){
+  const P=S.pending; if(!P) return;
+  if(P.A.dead){ S.pending=null; return; }
+  const sA=closestS(P.A.route,P.conf);
+  const tA=(sA-P.A.s)/Math.max(P.A.speed,0.15);
+  if(tA<0){ S.pending=null; return; }
+  const B_needed = P.vB*(tA+P.gap);
+  // spawn B once it can be placed on its own route without teleporting past the entry
+  const probe = P.make ? null : null;
+  if(tA <= 6.5){
+    const b=P.make();
+    const sB=closestS(b.route,P.conf);
+    b.s=clamp(sB-B_needed, 0, sB-2);
+    b.speed=P.vB; b.vmax=P.vB;
+    const st=atS(b.route,b.s); b.p=st.p; b.h=st.h;
+    S.pending=null;
+  }
+}
+
+/* ------------------------------ sim step ------------------------------ */
+const DT=0.04;
+function step(){
+  S.t+=DT;
+  // spawns
+  S.spawnCar-=DT;
+  if(S.spawnCar<=0 && S.traffic>0 && S.agents.filter(a=>a.kind==="car").length<16){
+    spawnCar({}); S.spawnCar = 0.7 + (1-S.traffic)*4.2 + rnd()*1.1;
+  } else if(S.traffic<=0) S.spawnCar=1;
+  S.spawnPed-=DT;
+  if(S.spawnPed<=0 && S.ped>0 && S.agents.filter(a=>a.kind==="ped").length<9){
+    spawnPed({}); S.spawnPed = 1.1 + (1-S.ped)*6.5 + rnd()*1.6;
+  } else if(S.ped<=0) S.spawnPed=1;
+
+  tickPending();
+  for(const a of S.agents) updateAgent(a,DT);
+  safetyTick(DT);
+  // reap
+  const dead=S.agents.filter(a=>a.dead);
+  if(dead.length){
+    for(const d of dead){ for(const c of (d._cells||[])){ const st=S.cells.get(c);
+      if(st){ st.occ.delete(d.id); if(st.lastId===null){st.lastId=d.id;st.lastExit=S.t;st.lastH=d.h.slice();} } } }
+    S.passed += dead.length;
+    S.agents=S.agents.filter(a=>!a.dead);
+  }
+  // pipeline strip animation
+  S.stageT+=DT;
+  if(S.flash>0){ S.flash-=DT; }
+  else if(S.stageT>0.42){ S.stageT=0; S.stage=(S.stage+1)%6; }
+}
+function resetSim(){
+  _seed=20260818;
+  S.t=0; S.agents=[]; S.events=[]; S.pairs=new Map(); S.cells=new Map(); S.heat=[];
+  S.passed=0; S.nextId=1; S.spawnCar=0; S.spawnPed=0.6; S.sel=null; S.pending=null; S.phaseOff=0;
+  heatCv.getContext("2d").clearRect(0,0,heatCv.width,heatCv.height);
+  renderEvents(); document.getElementById("detail").style.display="none";
+}
+
+/* ============================== RENDER ============================== */
+const camCv=document.getElementById("cam"), gndCv=document.getElementById("gnd");
+const cctx=camCv.getContext("2d"), gctx=gndCv.getContext("2d");
+const heatCv=document.createElement("canvas");
+let CW=0,CH=0,GW=0,GH=0,DPR=1;
+
+const CAM={eye:[-13.5,-21.5,8.0], tgt:[0.8,-0.4,0.5], fov:56};
+let F_=[0,0,0],R_=[0,0,0],U_=[0,0,0],FX=1;
+function nrm(v){const n=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/n,v[1]/n,v[2]/n];}
+function crs(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+function camSetup(){
+  F_=nrm([CAM.tgt[0]-CAM.eye[0],CAM.tgt[1]-CAM.eye[1],CAM.tgt[2]-CAM.eye[2]]);
+  R_=nrm(crs(F_,[0,0,1])); U_=crs(R_,F_);
+  FX=(CW/2)/Math.tan(CAM.fov*Math.PI/360);
+}
+function toCam(p){
+  const d=[p[0]-CAM.eye[0], p[1]-CAM.eye[1], (p[2]||0)-CAM.eye[2]];
+  return [d[0]*R_[0]+d[1]*R_[1]+d[2]*R_[2], d[0]*U_[0]+d[1]*U_[1]+d[2]*U_[2], d[0]*F_[0]+d[1]*F_[1]+d[2]*F_[2]];
+}
+const NEAR=0.4;
+function clipNear(cs){
+  const out=[];
+  for(let i=0;i<cs.length;i++){
+    const a=cs[i], b=cs[(i+1)%cs.length];
+    const ain=a[2]>=NEAR, bin=b[2]>=NEAR;
+    if(ain) out.push(a);
+    if(ain!==bin){ const t=(NEAR-a[2])/(b[2]-a[2]);
+      out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, NEAR]); }
+  }
+  return out;
+}
+function scr(c){ return [CW/2 + FX*c[0]/c[2], CH/2 - FX*c[1]/c[2]]; }
+function projPoly(pts3){
+  const cs=clipNear(pts3.map(toCam));
+  if(cs.length<3) return null;
+  return cs.map(scr);
+}
+function fillPoly(ctx,pts3,style){
+  const p=projPoly(pts3); if(!p) return;
+  ctx.beginPath(); ctx.moveTo(p[0][0],p[0][1]);
+  for(let i=1;i<p.length;i++) ctx.lineTo(p[i][0],p[i][1]);
+  ctx.closePath(); ctx.fillStyle=style; ctx.fill();
+}
+function projPt(p3){ const c=toCam(p3); return c[2]<NEAR?null:scr(c); }
+
+function rectPts(cx,cy,hx,hy,z){ return [[cx-hx,cy-hy,z||0],[cx+hx,cy-hy,z||0],[cx+hx,cy+hy,z||0],[cx-hx,cy+hy,z||0]]; }
+
+/* ---------- static scene in camera view ---------- */
+const ROAD="#191920", ROAD2="#1e1e26", GROUND="#0b0b0d";
+function drawScene(){
+  const night=UI.night;
+  const sky=cctx.createLinearGradient(0,0,0,CH);
+  sky.addColorStop(0, night?"#08080c":"#1b2436");
+  sky.addColorStop(1, night?"#111119":"#2c3a4a");
+  cctx.fillStyle=sky; cctx.fillRect(0,0,CW,CH);
+  fillPoly(cctx, rectPts(0,40,120,100), night?GROUND:"#15161a");
+  // roads
+  fillPoly(cctx, rectPts(0,0,HALF,80), ROAD);
+  fillPoly(cctx, rectPts(0,0,80,HALF), ROAD);
+  fillPoly(cctx, rectPts(0,0,HALF,HALF), ROAD2);
+  // edge lines
+  const EL="rgba(255,255,255,.16)";
+  for(const sx of [-1,1]){
+    fillPoly(cctx, [[sx*HALF-0.1,HALF,0.01],[sx*HALF+0.1,HALF,0.01],[sx*HALF+0.1,80,0.01],[sx*HALF-0.1,80,0.01]], EL);
+    fillPoly(cctx, [[sx*HALF-0.1,-HALF,0.01],[sx*HALF+0.1,-HALF,0.01],[sx*HALF+0.1,-80,0.01],[sx*HALF-0.1,-80,0.01]], EL);
+    fillPoly(cctx, [[HALF,sx*HALF-0.1,0.01],[HALF,sx*HALF+0.1,0.01],[80,sx*HALF+0.1,0.01],[80,sx*HALF-0.1,0.01]], EL);
+    fillPoly(cctx, [[-HALF,sx*HALF-0.1,0.01],[-HALF,sx*HALF+0.1,0.01],[-80,sx*HALF+0.1,0.01],[-80,sx*HALF-0.1,0.01]], EL);
+  }
+  // dashed centre lines
+  const DL="rgba(255,220,150,.24)";
+  for(let d=HALF+1; d<70; d+=6){
+    fillPoly(cctx, [[-0.12,d,0.01],[0.12,d,0.01],[0.12,d+3,0.01],[-0.12,d+3,0.01]], DL);
+    fillPoly(cctx, [[-0.12,-d,0.01],[0.12,-d,0.01],[0.12,-d-3,0.01],[-0.12,-d-3,0.01]], DL);
+    fillPoly(cctx, [[d,-0.12,0.01],[d,0.12,0.01],[d+3,0.12,0.01],[d+3,-0.12,0.01]], DL);
+    fillPoly(cctx, [[-d,-0.12,0.01],[-d,0.12,0.01],[-d-3,0.12,0.01],[-d-3,-0.12,0.01]], DL);
+  }
+  // stop bars
+  const SB="rgba(255,255,255,.3)";
+  fillPoly(cctx, [[0.15,-HALF-0.55,0.02],[HALF,-HALF-0.55,0.02],[HALF,-HALF-0.05,0.02],[0.15,-HALF-0.05,0.02]], SB);
+  fillPoly(cctx, [[-0.15,HALF+0.55,0.02],[-HALF,HALF+0.55,0.02],[-HALF,HALF+0.05,0.02],[-0.15,HALF+0.05,0.02]], SB);
+  fillPoly(cctx, [[HALF+0.05,0.15,0.02],[HALF+0.55,0.15,0.02],[HALF+0.55,HALF,0.02],[HALF+0.05,HALF,0.02]], SB);
+  fillPoly(cctx, [[-HALF-0.05,-0.15,0.02],[-HALF-0.55,-0.15,0.02],[-HALF-0.55,-HALF,0.02],[-HALF-0.05,-HALF,0.02]], SB);
+  // crosswalks
+  const ZS="rgba(255,255,255,.34)";
+  for(const sy of [1,-1]) for(let x=-HALF+0.35; x<HALF-0.5; x+=1.15)
+    fillPoly(cctx, [[x,sy*CW0,0.02],[x+0.62,sy*CW0,0.02],[x+0.62,sy*CW1,0.02],[x,sy*CW1,0.02]], ZS);
+  for(const sx of [1,-1]) for(let y=-HALF+0.35; y<HALF-0.5; y+=1.15)
+    fillPoly(cctx, [[sx*CW0,y,0.02],[sx*CW0,y+0.62,0.02],[sx*CW1,y+0.62,0.02],[sx*CW1,y,0.02]], ZS);
+  if(night) drawLights();
+}
+const POLES=[[-10.5,-11.5],[10.5,-11.5],[-10.5,11.5],[10.5,11.5]];
+function drawLights(){
+  for(const [px,py] of POLES){
+    const cen=projPt([px*0.55,py*0.55,0]);
+    if(cen){
+      const g=cctx.createRadialGradient(cen[0],cen[1],2,cen[0],cen[1],CW*0.16);
+      g.addColorStop(0,"rgba(255,196,120,.14)"); g.addColorStop(1,"rgba(255,196,120,0)");
+      cctx.fillStyle=g; cctx.beginPath(); cctx.arc(cen[0],cen[1],CW*0.16,0,7); cctx.fill();
+    }
+    const b=projPt([px,py,0]), t=projPt([px,py,8.2]), h=projPt([px*0.78,py*0.78,8.0]);
+    if(b&&t){ cctx.strokeStyle="rgba(150,150,165,.45)"; cctx.lineWidth=2;
+      cctx.beginPath(); cctx.moveTo(b[0],b[1]); cctx.lineTo(t[0],t[1]);
+      if(h) cctx.lineTo(h[0],h[1]); cctx.stroke(); }
+    if(h){ cctx.fillStyle="rgba(255,208,140,.95)"; cctx.beginPath(); cctx.arc(h[0],h[1],3,0,7); cctx.fill(); }
+  }
+  // signal heads
+  const ph=phase();
+  const SIG=[[HALF+1.2,-HALF-1.2,"NS"],[-HALF-1.2,HALF+1.2,"NS"],[HALF+1.2,HALF+1.2,"EW"],[-HALF-1.2,-HALF-1.2,"EW"]];
+  for(const [x,y,ax] of SIG){
+    const p=projPt([x,y,4.6]); if(!p) continue;
+    const st=ph[ax], col= st==="g"?"#34d399": st==="y"?"#fbbf24":"#ef4444";
+    const b=projPt([x,y,0]);
+    if(b){ cctx.strokeStyle="rgba(140,140,155,.35)"; cctx.lineWidth=1.6;
+      cctx.beginPath(); cctx.moveTo(b[0],b[1]); cctx.lineTo(p[0],p[1]); cctx.stroke(); }
+    cctx.fillStyle=col; cctx.beginPath(); cctx.arc(p[0],p[1],3.4,0,7); cctx.fill();
+  }
+}
+
+/* ---------- agents in camera view ---------- */
+function boxCorners(a){
+  const hl=a.len/2, hw=a.wid/2, hz=a.hgt, hx=a.h[0], hy=a.h[1];
+  const P=(dl,dw,dz)=>[a.p[0]+hx*dl-hy*dw, a.p[1]+hy*dl+hx*dw, dz];
+  return [P(-hl,-hw,0),P(hl,-hw,0),P(hl,hw,0),P(-hl,hw,0),
+          P(-hl,-hw,hz),P(hl,-hw,hz),P(hl,hw,hz),P(-hl,hw,hz)];
+}
+const FACES=[[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+function drawAgentCam(a){
+  const c=boxCorners(a);
+  const hot=a.hot>0.05;
+  const base = a.kind==="ped" ? [52,211,153] : (a.cls==="truck"?[148,163,184]:[96,165,250]);
+  const col = hot ? [239,68,68] : base;
+  const faces=FACES.map(f=>{
+    const pts=f.map(i=>c[i]);
+    const z=pts.reduce((s,p)=>s+toCam(p)[2],0)/pts.length;
+    return {pts,z};
+  }).sort((x,y)=>y.z-x.z);
+  for(let k=0;k<faces.length;k++){
+    const shade = 0.42 + 0.13*k/faces.length + (k===faces.length-1?0.22:0);
+    fillPoly(cctx, faces[k].pts, `rgba(${Math.round(col[0]*shade)},${Math.round(col[1]*shade)},${Math.round(col[2]*shade)},.95)`);
+  }
+  // wireframe top edge for readability
+  const top=projPoly([c[4],c[5],c[6],c[7]]);
+  if(top){ cctx.strokeStyle=`rgba(${col[0]},${col[1]},${col[2]},.75)`; cctx.lineWidth=1;
+    cctx.beginPath(); cctx.moveTo(top[0][0],top[0][1]);
+    for(let i=1;i<top.length;i++) cctx.lineTo(top[i][0],top[i][1]);
+    cctx.closePath(); cctx.stroke(); }
+  if(!UI.box) return;
+  // detector bounding box = AABB of the projected 3D box
+  const ps=c.map(projPt).filter(Boolean);
+  if(ps.length<8) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const p of ps){ x0=Math.min(x0,p[0]); y0=Math.min(y0,p[1]); x1=Math.max(x1,p[0]); y1=Math.max(y1,p[1]); }
+  if(x1<0||x0>CW||y1<0||y0>CH) return;
+  const cs=`rgb(${col[0]},${col[1]},${col[2]})`;
+  cctx.strokeStyle=cs; cctx.lineWidth=1.6; cctx.setLineDash([]);
+  cctx.strokeRect(x0,y0,x1-x0,y1-y0);
+  const cor=Math.min(11,(x1-x0)*0.3);
+  cctx.lineWidth=2.6; cctx.beginPath();
+  cctx.moveTo(x0,y0+cor); cctx.lineTo(x0,y0); cctx.lineTo(x0+cor,y0);
+  cctx.moveTo(x1-cor,y1); cctx.lineTo(x1,y1); cctx.lineTo(x1,y1-cor); cctx.stroke();
+  if(UI.id){
+    const lb=`${a.cls}#${a.id}  ${a.conf.toFixed(2)}`;
+    cctx.font="600 10.5px 'JetBrains Mono',monospace";
+    const w=cctx.measureText(lb).width+9;
+    cctx.fillStyle=cs; cctx.fillRect(x0, Math.max(0,y0-15), w, 14);
+    cctx.fillStyle="#06060a"; cctx.fillText(lb, x0+4.5, Math.max(0,y0-15)+10.5);
+  }
+}
+function drawCam(){
+  camSetup(); drawScene();
+  const order=S.agents.map(a=>({a,z:toCam([a.p[0],a.p[1],0])[2]})).sort((x,y)=>y.z-x.z);
+  for(const o of order) drawAgentCam(o.a);
+  // conflict line between the live critical pair
+  const L=S.live;
+  if(L.ttc!==null && L.ttc<S.ttcTh && L.pairA && L.pairB){
+    const p1=projPt([L.pairA.p[0],L.pairA.p[1],0.7]), p2=projPt([L.pairB.p[0],L.pairB.p[1],0.7]);
+    if(p1&&p2){
+      cctx.setLineDash([6,5]); cctx.strokeStyle="rgba(239,68,68,.9)"; cctx.lineWidth=2;
+      cctx.beginPath(); cctx.moveTo(p1[0],p1[1]); cctx.lineTo(p2[0],p2[1]); cctx.stroke();
+      cctx.setLineDash([]);
+      const mx=(p1[0]+p2[0])/2, my=(p1[1]+p2[1])/2;
+      const lb="TTC "+L.ttc.toFixed(2)+" s";
+      cctx.font="700 12px 'JetBrains Mono',monospace";
+      const w=cctx.measureText(lb).width+12;
+      cctx.fillStyle="rgba(239,68,68,.95)"; cctx.fillRect(mx-w/2,my-10,w,19);
+      cctx.fillStyle="#fff"; cctx.textAlign="center"; cctx.fillText(lb,mx,my+3.5); cctx.textAlign="left";
+    }
+  }
+  // CCTV HUD
+  cctx.font="600 11px 'JetBrains Mono',monospace"; cctx.fillStyle="rgba(255,255,255,.5)";
+  cctx.fillText("CAM-01 · 1920×1080 · 25 fps", 12, 19);
+  const mm=String(Math.floor(S.t/60)).padStart(2,"0"), ss=String(Math.floor(S.t%60)).padStart(2,"0");
+  const ms=String(Math.floor((S.t%1)*10));
+  cctx.textAlign="right"; cctx.fillText(`T ${mm}:${ss}.${ms}`, CW-12, 19); cctx.textAlign="left";
+  if(S.running){ cctx.fillStyle="rgba(239,68,68,.9)"; cctx.beginPath(); cctx.arc(CW-118,15.5,4,0,7); cctx.fill();
+    cctx.fillStyle="rgba(255,255,255,.5)"; cctx.fillText("REC", CW-110, 19); }
+}
+
+/* ---------- ground plane view ---------- */
+const GX=[-32,32], GY=[-21,21];
+const gx=x=>(x-GX[0])/(GX[1]-GX[0])*GW;
+const gy=y=>GH-(y-GY[0])/(GY[1]-GY[0])*GH;
+const gs=()=>GW/(GX[1]-GX[0]);
+function drawGnd(){
+  gctx.fillStyle="#0a0a0c"; gctx.fillRect(0,0,GW,GH);
+  // grid 5 m
+  gctx.strokeStyle="rgba(255,255,255,.045)"; gctx.lineWidth=1;
+  for(let x=Math.ceil(GX[0]/5)*5;x<=GX[1];x+=5){ gctx.beginPath(); gctx.moveTo(gx(x),0); gctx.lineTo(gx(x),GH); gctx.stroke(); }
+  for(let y=Math.ceil(GY[0]/5)*5;y<=GY[1];y+=5){ gctx.beginPath(); gctx.moveTo(0,gy(y)); gctx.lineTo(GW,gy(y)); gctx.stroke(); }
+  // roads
+  gctx.fillStyle="#1e1e26";
+  gctx.fillRect(gx(-HALF),0,HALF*2*gs(),GH);
+  gctx.fillRect(0,gy(HALF),GW,HALF*2*gs());
+  gctx.fillStyle="#26262f"; gctx.fillRect(gx(-HALF),gy(HALF),HALF*2*gs(),HALF*2*gs());
+  // crosswalks
+  gctx.fillStyle="rgba(255,255,255,.13)";
+  for(const sy of [1,-1]) for(let x=-HALF+0.35;x<HALF-0.5;x+=1.15)
+    gctx.fillRect(gx(x),gy(sy*CW1),0.62*gs(),(CW1-CW0)*gs());
+  for(const sx of [1,-1]) for(let y=-HALF+0.35;y<HALF-0.5;y+=1.15)
+    gctx.fillRect(gx(sx*CW0),gy(y+0.62),(CW1-CW0)*gs(),0.62*gs());
+  // heat
+  if(UI.heat) gctx.drawImage(heatCv,0,0,GW,GH);
+  // conflict cells
+  if(UI.zone){
+    for(const [k,st] of S.cells){
+      const i=Math.round(k/1000), j=k-i*1000;
+      const occ=st.occ.size, recent=S.t-st.lastExit;
+      if(occ>1){ gctx.fillStyle="rgba(239,68,68,.5)"; }
+      else if(occ===1){ gctx.fillStyle="rgba(255,255,255,.07)"; }
+      else if(recent<S.petTh){ gctx.fillStyle="rgba(245,158,11,"+(0.34*(1-recent/S.petTh)).toFixed(3)+")"; }
+      else continue;
+      gctx.fillRect(gx(i*CELL),gy((j+1)*CELL),CELL*gs()-0.5,CELL*gs()-0.5);
+    }
+  }
+  // trails
+  if(UI.trail) for(const a of S.agents){
+    if(a.trail.length<2) continue;
+    const rgb = a.kind==="ped"?"52,211,153":"96,165,250";
+    gctx.lineWidth = a.kind==="ped"?1.4:2.2; gctx.lineCap="round";
+    for(let i=1;i<a.trail.length;i++){
+      const f=i/a.trail.length;
+      gctx.strokeStyle=`rgba(${rgb},${(0.36*f*f).toFixed(3)})`;
+      gctx.beginPath(); gctx.moveTo(gx(a.trail[i-1][0]),gy(a.trail[i-1][1]));
+      gctx.lineTo(gx(a.trail[i][0]),gy(a.trail[i][1])); gctx.stroke();
+    }
+  }
+  // signals
+  const ph=phase();
+  const SG=[[LANE+1.6,-HALF-1.2,"NS"],[-LANE-1.6,HALF+1.2,"NS"],[HALF+1.2,LANE+1.6,"EW"],[-HALF-1.2,-LANE-1.6,"EW"]];
+  for(const [x,y,ax] of SG){ const st=ph[ax];
+    gctx.fillStyle = st==="g"?"#34d399": st==="y"?"#fbbf24":"#ef4444";
+    gctx.beginPath(); gctx.arc(gx(x),gy(y),3.4,0,7); gctx.fill(); }
+  // agents
+  for(const a of S.agents){
+    const hot=a.hot>0.05;
+    const col = hot?"#ef4444":(a.kind==="ped"?"#34d399":(a.cls==="truck"?"#94a3b8":"#60a5fa"));
+    gctx.save(); gctx.translate(gx(a.p[0]),gy(a.p[1])); gctx.rotate(-Math.atan2(a.h[1],a.h[0]));
+    gctx.fillStyle=col;
+    if(a.kind==="ped"){ gctx.beginPath(); gctx.arc(0,0,Math.max(3.2,a.rad*gs()),0,7); gctx.fill(); }
+    else {
+      gctx.globalAlpha=.92;
+      gctx.fillRect(-a.len/2*gs(),-a.wid/2*gs(),a.len*gs(),a.wid*gs());
+      gctx.globalAlpha=1; gctx.fillStyle="rgba(255,255,255,.6)";
+      gctx.fillRect(a.len/2*gs()-2.5,-a.wid/2*gs(),2.5,a.wid*gs());
+    }
+    gctx.restore();
+    // velocity vector
+    if(a.speed>0.4){
+      const L=Math.min(a.speed*0.42,7)*gs();
+      gctx.strokeStyle=hot?"rgba(239,68,68,.85)":"rgba(255,255,255,.4)"; gctx.lineWidth=1.4;
+      gctx.beginPath(); gctx.moveTo(gx(a.p[0]),gy(a.p[1]));
+      gctx.lineTo(gx(a.p[0])+a.h[0]*L, gy(a.p[1])-a.h[1]*L); gctx.stroke();
+    }
+    if(a.accel<-3.0 && a.kind==="car"){
+      gctx.strokeStyle="rgba(251,191,36,.9)"; gctx.lineWidth=1.6;
+      gctx.beginPath(); gctx.arc(gx(a.p[0]),gy(a.p[1]),Math.max(6,a.rad*gs()+4),0,7); gctx.stroke();
+    }
+  }
+  // live conflict
+  const L=S.live;
+  if(L.ttc!==null && L.ttc<S.ttcTh && L.pairA && L.pairB){
+    const A=L.pairA,B=L.pairB;
+    gctx.setLineDash([5,4]); gctx.strokeStyle="rgba(239,68,68,.9)"; gctx.lineWidth=1.6;
+    gctx.beginPath(); gctx.moveTo(gx(A.p[0]),gy(A.p[1])); gctx.lineTo(gx(B.p[0]),gy(B.p[1])); gctx.stroke();
+    gctx.setLineDash([]);
+    const mx=(gx(A.p[0])+gx(B.p[0]))/2, my=(gy(A.p[1])+gy(B.p[1]))/2;
+    gctx.font="700 11px 'JetBrains Mono',monospace"; gctx.textAlign="center";
+    const lb="TTC "+L.ttc.toFixed(2)+"s"; const w=gctx.measureText(lb).width+10;
+    gctx.fillStyle="rgba(239,68,68,.95)"; gctx.fillRect(mx-w/2,my-9,w,17);
+    gctx.fillStyle="#fff"; gctx.fillText(lb,mx,my+3.5); gctx.textAlign="left";
+  }
+  // scale bar
+  gctx.strokeStyle="rgba(255,255,255,.4)"; gctx.lineWidth=1.4;
+  const x0=14,y0=GH-16,len=10*gs();
+  gctx.beginPath(); gctx.moveTo(x0,y0); gctx.lineTo(x0+len,y0);
+  gctx.moveTo(x0,y0-4); gctx.lineTo(x0,y0+4); gctx.moveTo(x0+len,y0-4); gctx.lineTo(x0+len,y0+4); gctx.stroke();
+  gctx.font="600 10.5px 'JetBrains Mono',monospace"; gctx.fillStyle="rgba(255,255,255,.5)";
+  gctx.fillText("10 m", x0+len+7, y0+4);
+}
+function paintHeat(){
+  const hc=heatCv.getContext("2d");
+  hc.clearRect(0,0,heatCv.width,heatCv.height);
+  for(const h of S.heat){
+    const r=(h.sev==="critical"?3.4:h.sev==="high"?2.9:2.3)*gs();
+    const X=gx(h.x), Y=gy(h.y);
+    const g=hc.createRadialGradient(X,Y,1,X,Y,r);
+    const c=h.sev==="critical"?"239,68,68":h.sev==="high"?"245,158,11":"96,165,250";
+    g.addColorStop(0,`rgba(${c},.2)`); g.addColorStop(1,`rgba(${c},0)`);
+    hc.fillStyle=g; hc.beginPath(); hc.arc(X,Y,r,0,7); hc.fill();
+  }
+}
+
+/* ------------------------------- UI ------------------------------- */
+const UI={box:true,id:true,night:true,trail:true,heat:true,zone:false};
+const $=id=>document.getElementById(id);
+
+function fmt(v,d,unit){ return v===null||v===undefined ? "—" : v.toFixed(d)+(unit?" "+unit:""); }
+function clsName(c){ return c==="person"?T("person"):T("car"); }
+function angType(a){ if(a===null) return T("naS"); return a<30?T("angRear"):(a<150?T("angCross"):T("angHead")); }
+function tstr(t){ const m=String(Math.floor(t/60)).padStart(2,"0"), s=String(Math.floor(t%60)).padStart(2,"0");
+  return m+":"+s+"."+String(Math.floor((t%1)*10)); }
+
+function renderEvents(){
+  const box=$("evList");
+  if(!S.events.length){ box.innerHTML='<div class="empty">'+T("evEmpty")+'</div>'; return; }
+  box.innerHTML = S.events.map((e,i)=>`
+    <div class="ev ${S.sel===e.id?'sel':''}" data-ev="${e.id}">
+      <div class="r1">
+        <span class="sev ${e.sev}">${e.sev}</span>
+        <span class="who">${clsName(e.aCls)} #${e.aId} ↔ ${clsName(e.bCls)} #${e.bId}</span>
+        <span class="tm">${tstr(e.t)}</span>
+      </div>
+      <div class="r2">
+        <span>TTC <b>${e.ttc===null?"—":e.ttc.toFixed(2)+"s"}</b></span>
+        <span>PET <b>${e.simul?"0.00s*":(e.pet===null?"—":e.pet.toFixed(2)+"s")}</b></span>
+        <span>d <b>${e.sep===null?"—":e.sep.toFixed(2)+"m"}</b></span>
+        <span>Δv <b>${e.rel===null?"—":e.rel.toFixed(1)+"m/s"}</b></span>
+        <span>score <b>${e.score.toFixed(1)}</b></span>
+      </div>
+      <div class="codes">${e.codes.map(c=>`<span class="code">${c}</span>`).join("")}</div>
+    </div>`).join("");
+  box.querySelectorAll(".ev").forEach(el=>el.onclick=()=>selectEvent(el.dataset.ev));
+}
+function selectEvent(id){
+  const e=S.events.find(x=>x.id===id); if(!e) return;
+  S.sel=id; renderEvents();
+  const d=$("detail"); d.style.display="block";
+  drawSnap(e);
+  $("detailKv").innerHTML=[
+    [T("kScore"), e.score.toFixed(1)+" / "+RULES.bands.critical.toFixed(1)],
+    [T("kType"), angType(e.angle)],
+    [T("kAngle"), e.angle===null?T("naS"):e.angle.toFixed(0)+"°"],
+    [T("kDur"), (e.tEnd-e.tStart).toFixed(1)+" s"],
+    [T("kProfile"), RULES.profile_id]
+  ].map(([k,v])=>`<div class="k">${k}</div><div class="v">${v}</div>`).join("");
+}
+function drawSnap(e){
+  const cv=$("snapCv"), ctx=cv.getContext("2d");
+  const w=cv.width,h=cv.height;
+  ctx.fillStyle="#0a0a0c"; ctx.fillRect(0,0,w,h);
+  const s=e.snap; if(!s){ return; }
+  const pts=[s.ax,s.bx].concat(s.at,s.bt);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const p of pts){ x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]); }
+  const pad=4; x0-=pad;x1+=pad;y0-=pad;y1+=pad;
+  const sc=Math.min(w/(x1-x0), h/(y1-y0));
+  const X=x=>(x-x0)*sc+(w-(x1-x0)*sc)/2, Y=y=>h-((y-y0)*sc+(h-(y1-y0)*sc)/2);
+  ctx.strokeStyle="rgba(255,255,255,.05)"; ctx.lineWidth=1;
+  for(let g=Math.ceil(x0/5)*5;g<x1;g+=5){ctx.beginPath();ctx.moveTo(X(g),0);ctx.lineTo(X(g),h);ctx.stroke();}
+  for(let g=Math.ceil(y0/5)*5;g<y1;g+=5){ctx.beginPath();ctx.moveTo(0,Y(g));ctx.lineTo(w,Y(g));ctx.stroke();}
+  const draw=(trail,pos,hd,cls,lab,col)=>{
+    if(trail.length>1){ ctx.strokeStyle=col+"66"; ctx.lineWidth=1.6; ctx.beginPath();
+      ctx.moveTo(X(trail[0][0]),Y(trail[0][1]));
+      for(let i=1;i<trail.length;i++) ctx.lineTo(X(trail[i][0]),Y(trail[i][1])); ctx.stroke(); }
+    ctx.fillStyle=col;
+    ctx.save(); ctx.translate(X(pos[0]),Y(pos[1])); ctx.rotate(-Math.atan2(hd[1],hd[0]));
+    if(cls==="person"){ ctx.beginPath(); ctx.arc(0,0,3.4,0,7); ctx.fill(); }
+    else ctx.fillRect(-4.5*sc/2.6,-1.9*sc/2.6,9*sc/2.6,3.8*sc/2.6);
+    ctx.restore();
+    ctx.font="600 9.5px 'JetBrains Mono',monospace"; ctx.fillStyle=col;
+    const lw=ctx.measureText(lab).width;
+    ctx.fillText(lab, clamp(X(pos[0])+7,2,w-lw-2), clamp(Y(pos[1])-6,11,h-3));
+  };
+  draw(s.at,s.ax,s.ah,s.aCls,`#${s.aId} ${s.aSp.toFixed(1)} m/s`, s.aCls==="person"?"#34d399":"#60a5fa");
+  draw(s.bt,s.bx,s.bh,s.bCls,`#${s.bId} ${s.bSp.toFixed(1)} m/s`, s.bCls==="person"?"#34d399":"#60a5fa");
+  ctx.setLineDash([4,3]); ctx.strokeStyle="rgba(239,68,68,.95)"; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(X(s.ax[0]),Y(s.ax[1])); ctx.lineTo(X(s.bx[0]),Y(s.bx[1])); ctx.stroke();
+  ctx.setLineDash([]);
+  const mx=(X(s.ax[0])+X(s.bx[0]))/2, my=(Y(s.ax[1])+Y(s.bx[1]))/2;
+  const lb=(e.sep===null?"":e.sep.toFixed(2)+" m");
+  if(lb){ ctx.font="700 10px 'JetBrains Mono',monospace";
+    const tw=ctx.measureText(lb).width+10;
+    const bx=clamp(mx-tw/2,2,w-tw-2), by=clamp(my-9,2,h-20);
+    ctx.fillStyle="rgba(239,68,68,.92)"; ctx.fillRect(bx,by,tw,15);
+    ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.fillText(lb,bx+tw/2,by+11); ctx.textAlign="left"; }
+}
+
+function renderMetrics(){
+  $("clock").textContent=tstr(S.t);
+  const L=S.live;
+  const mt=$("mTtc"), ms=$("mSep");
+  mt.className="met"+(L.ttc!==null&&L.ttc<1.0?" hot":(L.ttc!==null&&L.ttc<S.ttcTh?" warn":""));
+  mt.querySelector(".v").innerHTML = L.ttc===null?"—":L.ttc.toFixed(2)+'<span class="u"> s</span>';
+  ms.className="met"+(L.sep!==null&&L.sep<S.sepTh?" warn":"");
+  ms.querySelector(".v").innerHTML = L.sep===null?"—":L.sep.toFixed(2)+'<span class="u"> m</span>';
+  $("mTracks").querySelector(".v").textContent=S.agents.length;
+  $("mEv").querySelector(".v").textContent=S.events.length;
+  $("mPass").querySelector(".v").textContent=S.passed;
+  $("mRate").querySelector(".v").textContent = S.passed<12 ? "—" : (100*S.events.length/S.passed).toFixed(0);
+  const stages=document.querySelectorAll(".st");
+  stages.forEach((el,i)=>el.classList.toggle("on", i===S.stage));
+}
+
+function applyLang(){
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent=T(el.dataset.i18n); });
+  document.documentElement.lang=LANG;
+  $("playTxt").textContent = S.running?T("pause"):T("play");
+  $("vTraffic").textContent = S.traffic<=0.01?T("none"):(S.traffic<0.34?T("low"):S.traffic<0.67?T("mid"):T("high"));
+  $("vPed").textContent = S.ped<=0.01?T("none"):(S.ped<0.34?T("low"):S.ped<0.67?T("mid"):T("high"));
+  renderEvents(); if(S.sel) selectEvent(S.sel);
+}
+
+/* ----------------------------- wiring ----------------------------- */
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  const w1=camCv.parentElement.clientWidth; CW=w1; CH=Math.round(w1*9/16);
+  camCv.width=CW*DPR; camCv.height=CH*DPR; camCv.style.height=CH+"px";
+  cctx.setTransform(DPR,0,0,DPR,0,0);
+  const w2=gndCv.parentElement.clientWidth; GW=w2; GH=Math.round(w2*(GY[1]-GY[0])/(GX[1]-GX[0]));
+  gndCv.width=GW*DPR; gndCv.height=GH*DPR; gndCv.style.height=GH+"px";
+  gctx.setTransform(DPR,0,0,DPR,0,0);
+  heatCv.width=GW; heatCv.height=GH;
+  paintHeat();
+}
+window.addEventListener("resize",resize);
+
+function tgl(id,key){ $(id).onclick=()=>{ UI[key]=!UI[key]; $(id).classList.toggle("on",UI[key]); }; }
+tgl("tBox","box"); tgl("tId","id"); tgl("tNight","night");
+tgl("tTrail","trail"); tgl("tHeat","heat"); tgl("tZone","zone");
+
+$("play").onclick=()=>{ S.running=!S.running;
+  $("playTxt").textContent=S.running?T("pause"):T("play");
+  $("playIco").innerHTML = S.running
+    ? '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'
+    : '<path d="M7 4.5v15l13-7.5z"/>'; };
+$("step").onclick=()=>{ S.running=false; $("playTxt").textContent=T("play");
+  $("playIco").innerHTML='<path d="M7 4.5v15l13-7.5z"/>';
+  for(let i=0;i<6;i++) step(); paintHeat(); };
+$("reset").onclick=()=>{ resetSim(); };
+
+function bind(rid,vid,fn){ const r=$(rid); r.oninput=()=>fn(parseFloat(r.value)); fn(parseFloat(r.value)); }
+bind("rSpeed","vSpeed",v=>{S.speed=v; $("vSpeed").textContent=v.toFixed(2).replace(/0$/,"")+"×";});
+bind("rTraffic","vTraffic",v=>{S.traffic=v/100;
+  $("vTraffic").textContent = S.traffic<=0.01?T("none"):(S.traffic<0.34?T("low"):S.traffic<0.67?T("mid"):T("high"));});
+bind("rPed","vPed",v=>{S.ped=v/100;
+  $("vPed").textContent = S.ped<=0.01?T("none"):(S.ped<0.34?T("low"):S.ped<0.67?T("mid"):T("high"));});
+bind("rRisk","vRisk",v=>{S.risk=v/100; $("vRisk").textContent=v.toFixed(0)+"%";});
+bind("rTtc","vTtc",v=>{S.ttcTh=v; $("vTtc").textContent=v.toFixed(1)+" "+(LANG==="en"?"s":LANG==="uz"?"s":"с");});
+bind("rPet","vPet",v=>{S.petTh=v; $("vPet").textContent=v.toFixed(1)+" "+(LANG==="en"?"s":LANG==="uz"?"s":"с");});
+bind("rSep","vSep",v=>{S.sepTh=v; $("vSep").textContent=v.toFixed(1)+" "+(LANG==="en"?"m":LANG==="uz"?"m":"м");});
+
+document.querySelectorAll("[data-scen]").forEach(b=>b.onclick=()=>{
+  if(!S.running){ S.running=true; $("playTxt").textContent=T("pause");
+    $("playIco").innerHTML='<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>'; }
+  runScenario(b.dataset.scen);
+});
+document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>{
+  LANG=b.dataset.lang;
+  document.querySelectorAll("[data-lang]").forEach(x=>x.classList.toggle("on",x===b));
+  applyLang();
+  ["rTtc","rPet","rSep","rTraffic","rPed","rSpeed","rRisk"].forEach(id=>$(id).dispatchEvent(new Event("input")));
+});
+
+/* ------------------------------ loop ------------------------------ */
+let acc=0, last=performance.now(), heatT=0;
+function frame(now){
+  const real=Math.min((now-last)/1000, 0.1); last=now;
+  if(S.running){
+    acc += real*S.speed;
+    let n=0;
+    while(acc>=DT && n<12){ step(); acc-=DT; n++; }
+    heatT+=real; if(heatT>0.5){ heatT=0; paintHeat(); }
+  }
+  drawCam(); drawGnd(); renderMetrics();
+  requestAnimationFrame(frame);
+}
+resize(); applyLang(); resetSim();
+spawnCar({app:"S",man:"straight",s:14}); spawnCar({app:"E",man:"straight",s:10});
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

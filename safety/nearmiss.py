@@ -28,6 +28,9 @@ DEFAULT_RULES = {
     "pet_trigger_s": 1.5,
     "separation_trigger_m": 2.0,
     "rel_speed_bonus_mps": 8.0,      # ~29 km/h relative speed adds weight
+    "min_rel_speed_mps": 1.5,        # below this the pair is not a conflict, whatever
+                                     # the geometry says (a walker easing past a parked
+                                     # car yields TTC ~0 s at 0.1 m/s of closing speed)
     "hard_braking_window_s": 3.0,    # braking episode within this window of the conflict
     # reason-code weights
     "weights": {
@@ -105,6 +108,11 @@ def build_events(
         if not pa.get("analyzable"):
             continue
         a, b = pa["track_a"], pa["track_b"]
+        # geometry alone is not enough: two bodies that barely move relative to each
+        # other are not in conflict, however small the distance between them is.
+        rel_at_sep = pa.get("rel_speed_at_min_sep_mps")
+        if rel_at_sep is not None and rel_at_sep < rules["min_rel_speed_mps"]:
+            continue
         codes: list[str] = []
         notes: list[str] = []
         score = 0.0

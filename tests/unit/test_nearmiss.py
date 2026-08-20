@@ -110,3 +110,38 @@ def test_events_sorted_by_score_desc():
     assert len(events) == 2
     assert events[0].score >= events[1].score
     assert events[0].road_user_a["track_id"] == 3
+
+
+def test_near_stationary_pair_is_not_a_conflict():
+    """A body easing past a stopped one yields TTC ~0 s at a trivial closing speed.
+
+    Geometry alone must not produce an event: without a relative-speed floor a
+    pedestrian walking around a parked car scores as a critical near-miss.
+    Regression for the gap found by the interactive method simulation.
+    """
+    events = build_events(
+        [pair(cls_b="person", min_ttc_s=0.05, t_min_ttc_s=2.0,
+              min_separation_m=0.1, rel_speed_at_min_sep_mps=0.2)],
+        [], [],
+    )
+    assert events == []
+
+
+def test_same_geometry_with_real_closing_speed_still_fires():
+    """The floor must not swallow genuine conflicts at ordinary speeds."""
+    events = build_events(
+        [pair(cls_b="person", min_ttc_s=0.05, t_min_ttc_s=2.0,
+              min_separation_m=0.1, rel_speed_at_min_sep_mps=6.0)],
+        [], [],
+    )
+    assert len(events) == 1
+    assert events[0].severity == "critical"
+    assert "very_low_ttc" in events[0].reason_codes
+
+
+def test_missing_rel_speed_does_not_silently_drop_the_pair():
+    """rel_speed is optional upstream; absence must not act as a rejection."""
+    events = build_events(
+        [pair(min_ttc_s=1.2, t_min_ttc_s=2.0, rel_speed_at_min_sep_mps=None)], [], [],
+    )
+    assert len(events) == 1

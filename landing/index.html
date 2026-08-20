@@ -27,6 +27,18 @@ body{background:var(--bg);color:var(--ink);font:16px/1.6 "Inter",-apple-system,s
 ::selection{background:var(--o);color:#08080a}
 a{color:inherit;text-decoration:none}
 .wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+.demoband{display:flex;gap:32px;align-items:center;border:1px solid var(--line);border-radius:20px;
+  background:linear-gradient(115deg,rgba(255,107,26,.09),rgba(17,17,20,.6) 55%);padding:34px 36px;transition:.25s}
+.demoband:hover{border-color:rgba(255,107,26,.4);transform:translateY(-2px)}
+.dbtxt{flex:1 1 auto}
+.dbk{font-size:11.5px;letter-spacing:.13em;color:var(--o);font-weight:700;margin-bottom:11px}
+.demoband h3{font-size:27px;letter-spacing:-.6px;line-height:1.2}
+.demoband p{color:var(--mut);font-size:15px;margin-top:11px;max-width:620px}
+.dbcta{display:inline-flex;align-items:center;gap:9px;margin-top:18px;font-weight:600;font-size:14.5px;color:var(--o2)}
+.dbart{flex:0 0 300px}
+.dbart svg{width:100%;height:auto;border-radius:10px;border:1px solid var(--line)}
+@media(max-width:860px){.demoband{flex-direction:column;align-items:flex-start;padding:26px 22px}
+  .demoband h3{font-size:22px}.dbart{flex:1 1 auto;width:100%}}
 .it{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-weight:500}
 
 nav{position:fixed;top:18px;left:0;right:0;z-index:60;padding:0 24px}
@@ -238,6 +250,7 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
     <a href="#product" data-i18n="nav1">Продукт</a>
     <a href="#how" data-i18n="nav2">Технология</a>
     <a href="#impact" data-i18n="nav3">Результаты</a>
+    <a href="simulation.html" data-i18n="nav6">Демо</a>
     <a href="#pricing" data-i18n="nav5">Тарифы</a>
     <a href="#roadmap" data-i18n="nav4">Дорожная карта</a>
   </div>
@@ -387,6 +400,38 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
       </div></div>
     </div>
   </div>
+</div></section>
+
+<section id="demo" style="padding-top:0"><div class="wrap">
+  <a class="demoband rv" href="simulation.html">
+    <div class="dbtxt">
+      <div class="dbk" data-i18n="db_k">ИНТЕРАКТИВНАЯ ДЕМОНСТРАЦИЯ</div>
+      <h3 data-i18n="db_h">Посмотрите, как это считается — прямо в браузере</h3>
+      <p data-i18n="db_p">Перекрёсток, вид с камеры и метрическая плоскость дороги рядом. TTC и PET считаются на ваших глазах теми же формулами, что и в движке. Можно запускать сценарии и двигать пороги.</p>
+      <span class="dbcta" data-i18n="db_c">Открыть симуляцию<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </div>
+    <div class="dbart">
+      <svg viewBox="0 0 300 180" fill="none">
+        <rect width="300" height="180" rx="10" fill="#0d0d10"/>
+        <rect x="118" y="0" width="64" height="180" fill="#1c1c24"/>
+        <rect x="0" y="62" width="300" height="56" fill="#1c1c24"/>
+        <rect x="118" y="62" width="64" height="56" fill="#24242e"/>
+        <g fill="rgba(255,255,255,.16)">
+          <rect x="122" y="44" width="7" height="12"/><rect x="134" y="44" width="7" height="12"/>
+          <rect x="146" y="44" width="7" height="12"/><rect x="158" y="44" width="7" height="12"/>
+          <rect x="170" y="44" width="7" height="12"/>
+        </g>
+        <rect x="136" y="88" width="26" height="11" rx="2" fill="#60a5fa"/>
+        <rect x="196" y="76" width="26" height="11" rx="2" fill="#60a5fa"/>
+        <circle cx="150" cy="66" r="4" fill="#34d399"/>
+        <path d="M152 92 L 150 70" stroke="#ef4444" stroke-width="1.6" stroke-dasharray="4 3"/>
+        <rect x="158" y="70" width="52" height="15" rx="3" fill="#ef4444"/>
+        <text x="184" y="81" font-family="monospace" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">TTC 0.9s</text>
+        <circle cx="150" cy="80" r="30" fill="url(#dbg)"/>
+        <defs><radialGradient id="dbg"><stop offset="0" stop-color="#ff6b1a" stop-opacity=".3"/><stop offset="1" stop-color="#ff6b1a" stop-opacity="0"/></radialGradient></defs>
+      </svg>
+    </div>
+  </a>
 </div></section>
 
 <section id="impact" style="padding-top:0"><div class="wrap">
@@ -556,7 +601,8 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
       <a href="#product" data-i18n="nav1">Продукт</a>
       <a href="#how" data-i18n="nav2">Технология</a>
       <a href="#impact" data-i18n="nav3">Результаты</a>
-      <a href="#pricing" data-i18n="nav5">Тарифы</a>
+      <a href="simulation.html" data-i18n="nav6">Демо</a>
+    <a href="#pricing" data-i18n="nav5">Тарифы</a>
       <a href="#roadmap" data-i18n="nav4">Дорожная карта</a>
       <a href="mailto:stuffdealerog@gmail.com">stuffdealerog@gmail.com</a>
     </div>
@@ -567,6 +613,10 @@ footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:90px}
 <script>
 const T = { ru:{}, uz:{
  nav1:"Mahsulot", nav2:"Texnologiya", nav3:"Natijalar", nav4:"Yo‘l xaritasi",
+ nav6:"Demo", db_k:"INTERAKTIV NAMOYISH",
+ db_h:"Bu qanday hisoblanishini brauzeringizda ko'ring",
+ db_p:"Chorraha, kamera ko'rinishi va yo'lning metrik tekisligi yonma-yon. TTC va PET ko'z o'ngingizda dvigateldagi formulalar bilan hisoblanadi. Ssenariylarni ishga tushirish va chegaralarni o'zgartirish mumkin.",
+ db_c:"Simulyatsiyani ochish",
  nav5:"Tariflar", mln:"mln so‘m", pl_main:"Asosiy",
  pl_k:"Tariflar", pl_h:"Bitta chorraha narxi — uni rekonstruksiya qilish qiymatining <span class='it'>foiz ulushi</span>",
  pl_s:"Taxminiy narxlar. Yakuniy tariflar birinchi pullik pilot yakunida, kamerani ulash tannarxi ma’lum bo‘lgach belgilanadi.",
@@ -630,6 +680,10 @@ const T = { ru:{}, uz:{
  fine:"SafeRoad AI — yo‘l xavfsizligining preventiv tahlili; kuzatuv tizimi ham, jarima kameralari ham emas. Xavf ko‘rsatkichlari razmetkalangan ma’lumotlarda validatsiyagacha eksperimental chegaralardan foydalanadi; xavf baholari — ustuvorlik indekslari, avariya ehtimoli emas. Manbalar: JSST (2023), O‘zbekiston IIV YHXX (2025). © 2026 SafeRoad AI."
 }, en:{
  nav1:"Product", nav2:"Technology", nav3:"Results", nav4:"Roadmap",
+ nav6:"Demo", db_k:"INTERACTIVE DEMONSTRATION",
+ db_h:"See how it is computed — right in your browser",
+ db_p:"The camera view and the metric road plane side by side. TTC and PET are computed in front of you with the same formulas as the engine. Run scenarios and move the thresholds.",
+ db_c:"Open the simulation",
  nav5:"Pricing", mln:"M UZS", pl_main:"Core",
  pl_k:"Pricing", pl_h:"One intersection costs <span class='it'>a fraction of a percent</span> of rebuilding it",
  pl_s:"Indicative prices. Final tariffs are set after the first paid pilot, once the real cost of connecting a camera is known.",
@@ -693,6 +747,10 @@ const T = { ru:{}, uz:{
  fine:"SafeRoad AI is preventive road-safety intelligence — not surveillance and not enforcement cameras. Risk metrics use experimental thresholds until validated on annotated data; risk scores are prioritization indices, not crash probabilities. Sources: WHO (Global status report on road safety, 2023), Uzbekistan traffic safety authority (2025). © 2026 SafeRoad AI."
 }};
 document.querySelectorAll('[data-i18n]').forEach(el => { T.ru[el.dataset.i18n] = el.innerHTML; });
+// Russian is the markup itself; snapshot it so switching back actually restores it
+document.querySelectorAll('[data-i18n]').forEach(el => {
+  if (T.ru[el.dataset.i18n] === undefined) T.ru[el.dataset.i18n] = el.innerHTML;
+});
 function setLang(l){
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const v = T[l][el.dataset.i18n]; if (v !== undefined) el.innerHTML = v;
