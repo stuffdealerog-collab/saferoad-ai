@@ -130,3 +130,72 @@ def test_output_carries_attribution_and_bbox():
     x0, y0, x1, y1 = out["bbox_m"]
     assert x1 > x0 and y1 > y0
     assert math.isclose(out["origin"]["lat"], LAT, abs_tol=1e-3)
+
+
+def test_simplify_keeps_shape_and_endpoints():
+    from tools.osm_to_district import simplify
+    straight = [(0, 0), (10, 0.2), (20, -0.1), (30, 0)]
+    out = simplify(straight, 1.5)
+    assert out[0] == (0, 0) and out[-1] == (30, 0)
+    assert len(out) == 2, "почти прямая должна схлопнуться в две точки"
+
+    corner = [(0, 0), (10, 0), (10, 10)]
+    assert len(simplify(corner, 1.5)) == 3, "поворот терять нельзя"
+
+
+def test_simplify_survives_a_long_way():
+    """A 5000-node way must not blow the stack — real exports contain them."""
+    from tools.osm_to_district import simplify
+    pts = [(i * 1.0, math.sin(i / 40) * 12) for i in range(5000)]
+    out = simplify(pts, 1.5)
+    assert 2 < len(out) < len(pts)
+
+
+def test_yard_passages_are_not_monitored():
+    """A living_street crossing an arterial is a driveway, not a camera site."""
+    from tools.osm_to_district import pick_monitored
+    js = [
+        {"x": 0, "y": 0, "rank": 2, "arms": 4, "cls": "primary", "minor_cls": "living_street"},
+        {"x": 900, "y": 0, "rank": 3, "arms": 4, "cls": "secondary", "minor_cls": "secondary"},
+    ]
+    picked = pick_monitored(js)
+    assert len(picked) == 1 and picked[0]["x"] == 900
+
+
+def test_monitored_set_is_spread_not_clustered():
+    """Ten junctions on one street 50 m apart must not eat the whole quota."""
+    from tools.osm_to_district import pick_monitored, MONITOR_SPACING_M
+    js = [{"x": i * 50.0, "y": 0.0, "rank": 2, "arms": 4,
+           "cls": "primary", "minor_cls": "primary"} for i in range(10)]
+    picked = pick_monitored(js)
+    assert len(picked) < 10
+    for a in range(len(picked)):
+        for b in range(a + 1, len(picked)):
+            d = math.dist((picked[a]["x"], picked[a]["y"]), (picked[b]["x"], picked[b]["y"]))
+            assert d >= MONITOR_SPACING_M
+
+
+def test_compact_output_is_flat_and_classed():
+    """Roads ship as [class index, x, y, x, y, ...] — the page parses this inline."""
+    out = build(crossing_pair(), "Тест")
+    assert out["road_classes"][out["roads"][0][0]] in ("secondary", "tertiary")
+    for r in out["roads"]:
+        assert len(r) >= 5 and (len(r) - 1) % 2 == 0
+    # street names live only in junction labels now, not on every road
+    assert all(not isinstance(v, str) for r in out["roads"] for v in r)
+
+
+def test_monitored_set_covers_more_than_arterials():
+    """Ranking alone gives every camera to the big roads; quotas keep the mix."""
+    from tools.osm_to_district import pick_monitored
+    js = []
+    for i in range(30):
+        js.append({"x": i * 400.0, "y": 0.0, "rank": 2, "arms": 4,
+                   "cls": "primary", "minor_cls": "primary"})
+    for i in range(30):
+        js.append({"x": i * 400.0, "y": 900.0, "rank": 6, "arms": 3,
+                   "cls": "residential", "minor_cls": "residential"})
+    picked = pick_monitored(js)
+    kinds = {p["cls"] for p in picked}
+    assert "primary" in kinds and "residential" in kinds, \
+        "в перечне должны быть и магистрали, и жилые улицы"

@@ -34,6 +34,80 @@ MERGE_RADIUS_M = 35.0
 # A junction needs at least this many road arms to be worth a camera.
 MIN_ARMS = 3
 
+# Geometry simplification: at map scale a 1.5 m deviation is invisible, and the
+# file has to load on a phone over a conference wifi.
+SIMPLIFY_EPS_M = 1.5
+
+# What counts as a junction worth monitoring. A yard passage crossing another
+# yard passage is not a place you put a camera, however many arms it has.
+MONITOR_MAX_RANK = CLASS_RANK["tertiary"]     # the major road must be this or better
+MONITOR_MINOR_EXCLUDE = {"living_street"}     # the minor road may not be a yard passage
+MONITOR_SPACING_M = 220.0                     # keep the set spread over the district
+MONITOR_LIMIT = 48
+# Quotas per class band. Ranking alone hands every camera to the arterials, and a
+# district's hazard list that contains no residential street is not a district's
+# hazard list — school approaches and side roads are where pedestrians get hit.
+MONITOR_QUOTA = [
+    (("motorway", "trunk", "primary"), 14),
+    (("secondary",), 12),
+    (("tertiary",), 12),
+    (("unclassified", "residential"), 10),
+]
+
+
+def simplify(pts: list[tuple[float, float]], eps: float) -> list[tuple[float, float]]:
+    """Douglas-Peucker. Iterative, because a district has ways with 400+ nodes and
+    the recursive form blows the stack on the worst of them."""
+    if len(pts) < 3:
+        return pts
+    keep = [False] * len(pts)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        i, j = stack.pop()
+        if j <= i + 1:
+            continue
+        ax, ay = pts[i]
+        bx, by = pts[j]
+        dx, dy = bx - ax, by - ay
+        den = math.hypot(dx, dy)
+        worst, worst_k = -1.0, -1
+        for k in range(i + 1, j):
+            px, py = pts[k]
+            d = (abs(dy * px - dx * py + bx * ay - by * ax) / den) if den > 1e-9 \
+                else math.dist((px, py), (ax, ay))
+            if d > worst:
+                worst, worst_k = d, k
+        if worst > eps:
+            keep[worst_k] = True
+            stack.append((i, worst_k))
+            stack.append((worst_k, j))
+    return [p for p, k in zip(pts, keep) if k]
+
+
+def pick_monitored(junctions: list[dict]) -> list[dict]:
+    """Rank the junctions and thin them out spatially.
+
+    Ranking alone clusters every pick onto one arterial; a road authority needs
+    the district covered, not one street sampled forty times.
+    """
+    picked: list[dict] = []
+    for classes, quota in MONITOR_QUOTA:
+        band = [j for j in junctions
+                if j["cls"] in classes
+                and j.get("minor_cls") not in MONITOR_MINOR_EXCLUDE]
+        band.sort(key=lambda j: (j["rank"], -j["arms"]))
+        taken = 0
+        for j in band:
+            if taken >= quota or len(picked) >= MONITOR_LIMIT:
+                break
+            if any(math.dist((j["x"], j["y"]), (p["x"], p["y"])) < MONITOR_SPACING_M
+                   for p in picked):
+                continue
+            picked.append(j)
+            taken += 1
+    return picked
+
 
 def base_class(hw: str) -> str:
     return hw[: -len(LINK_SUFFIX)] if hw.endswith(LINK_SUFFIX) else hw
@@ -109,7 +183,7 @@ def build(raw: dict, district_name: str) -> dict:
             "lanes": parse_lanes(tags.get("lanes")),
             "maxspeed": parse_speed(tags.get("maxspeed")),
             "oneway": tags.get("oneway") in ("yes", "1", "-1"),
-            "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
+            "pts": [[round(x, 1), round(y, 1)] for x, y in simplify(pts, SIMPLIFY_EPS_M)],
         })
         last = len(w["nodes"]) - 1
         for pos, (nid, (x, y)) in enumerate(zip(w["nodes"], pts)):
@@ -135,12 +209,14 @@ def build(raw: dict, district_name: str) -> dict:
         # An intersection of a street with itself is a geometry artefact, not a junction.
         if len(set(names)) < 2:
             continue
-        rank = min(CLASS_RANK[r["cls"]] for r in anchors)
+        ranks = sorted(CLASS_RANK[r["cls"]] for r in anchors)
+        rank, minor_rank = ranks[0], ranks[-1]
+        minor_cls = next(c for c, v in CLASS_RANK.items() if v == minor_rank)
         x, y = node_pos[nid]
         raw_junctions.append({
             "id": nid, "x": round(x, 1), "y": round(y, 1),
             "cls": min(anchors, key=lambda r: CLASS_RANK[r["cls"]])["cls"],
-            "rank": rank, "arms": arms,
+            "rank": rank, "arms": arms, "minor_cls": minor_cls,
             "names": sorted(set(names))[:2],
             "signal": nid in signals,
             "maxspeed": max((r["maxspeed"] or 0) for r in anchors) or None,
@@ -156,19 +232,37 @@ def build(raw: dict, district_name: str) -> dict:
         merged.append(j)
 
     junctions = [j for j in merged if j["arms"] >= MIN_ARMS]
+    monitored = pick_monitored(junctions)
     for j in junctions:
         j["label"] = " × ".join(j["names"]) if len(j["names"]) > 1 else (j["names"][0] if j["names"] else "—")
         j.pop("names", None)
 
     xs = [p[0] for r in roads for p in r["pts"]]
     ys = [p[1] for r in roads for p in r["pts"]]
+
+    # Compact form: the page carries this inline so it opens from file:// with no
+    # server, so every byte is one the demo laptop has to parse. Street names are
+    # already baked into the junction labels, so the drawn roads need only a class
+    # and a flat coordinate list.
+    classes = sorted(CLASS_RANK, key=lambda c: CLASS_RANK[c])
+    cls_idx = {c: i for i, c in enumerate(classes)}
+    flat_roads = [
+        [cls_idx[r["cls"]]] + [v for p in r["pts"] for v in p]
+        for r in roads if len(r["pts"]) >= 2
+    ]
+    for j in monitored:
+        j.pop("minor_cls", None)
+        j.pop("rank", None)
+
     return {
         "name": district_name,
         "source": "OpenStreetMap contributors, ODbL",
         "origin": {"lat": round(lat0, 6), "lon": round(lon0, 6)},
         "bbox_m": [round(min(xs), 1), round(min(ys), 1), round(max(xs), 1), round(max(ys), 1)],
-        "roads": roads,
-        "junctions": junctions,
+        "road_classes": classes,
+        "roads": flat_roads,
+        "junctions": monitored,
+        "junctions_found": len(junctions),
     }
 
 
@@ -189,9 +283,10 @@ def main(argv: list[str]) -> int:
 
     w = out["bbox_m"][2] - out["bbox_m"][0]
     h = out["bbox_m"][3] - out["bbox_m"][1]
-    named = sum(1 for j in out["junctions"] if j["label"] != "—")
-    print(f"дорог:      {len(out['roads'])}")
-    print(f"перекрёстков: {len(out['junctions'])} (с названиями: {named})")
+    pts = sum((len(r) - 1) // 2 for r in out["roads"])
+    print(f"дорог:      {len(out['roads'])}, точек {pts}")
+    print(f"перекрёстков: найдено {out['junctions_found']}, "
+          f"под наблюдение отобрано {len(out['junctions'])}")
     print(f"охват:      {w/1000:.1f} × {h/1000:.1f} км")
     print(f"записано:   {dst} ({dst.stat().st_size/1024:.0f} КБ)")
     return 0
