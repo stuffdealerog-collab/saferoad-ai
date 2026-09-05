@@ -64,6 +64,9 @@ body[data-mode="expert"] .simple-only{display:none !important}
 .rk .val{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600;flex:none}
 .rk .val.nd{color:var(--dim);font-weight:400;font-size:11px}
 .mapnote{padding:0 15px 14px;font-size:11.5px;color:var(--dim);line-height:1.55}
+.legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding:2px 15px 12px;font-size:11px;color:var(--dim)}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.rk .obs{font-size:10px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-left:8px;flex:none}
 
 /* ---------- narration ---------- */
 .narr{padding:6px 15px 14px;max-height:250px;overflow-y:auto}
@@ -214,7 +217,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 
   <div class="intro">
     <h1><span data-i18n="h1a">Как из обычного видео получается</span> <span class="it" data-i18n="h1b">измеримая опасность</span></h1>
-    <p class="simple-only" data-i18n="leadS">Выберите перекрёсток на карте района и смотрите. Система сама находит моменты, когда авария почти случилась, и объясняет каждый простым языком. Чем дольше идёт наблюдение, тем точнее становится перечень опасных мест.</p>
+    <p class="simple-only" data-i18n="leadS">Все 48 камер района работают одновременно и набирают статистику сами — на карте видно, где опаснее. Откройте любой перекрёсток, чтобы посмотреть, что там происходит: система находит моменты, когда авария почти случилась, и объясняет каждый простым языком.</p>
     <p class="expert-only" data-i18n="lead">Слева — то, что видит камера. Справа — то, что видит система: метрическая плоскость дороги, траектории и физика конфликтов. Каждое событие посчитано теми же формулами и с теми же порогами, что и в рабочем движке.</p>
   </div>
 
@@ -295,6 +298,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
         <div class="mapwrap"><canvas id="map"></canvas>
           <div class="mapattr" id="mapAttr"></div></div>
         <div class="rank" id="rank"></div>
+        <div class="legend" id="legend"></div>
         <div class="mapnote" data-i18n="mapNote">Улицы, их классы и названия перекрёстков — реальные данные OpenStreetMap. Движение по ним синтетическое: интенсивность потока, число пешеходов и доля нарушителей — предположения по классу дороги, а не измерения этого района. Рейтинг показывает опасность смоделированного трафика на реальной геометрии, и пока камера не набрала данных, места в перечне у неё нет.</div>
       </div>
 
@@ -354,10 +358,12 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 const I18N = {
  ru:{badge:"Симуляция · экспериментальные пороги",back:"На сайт",
   mSimple:"Просто",mExpert:"Эксперт",
-  leadS:"Выберите перекрёсток на карте района и смотрите. Система сама находит моменты, когда авария почти случилась, и объясняет каждый простым языком. Чем дольше идёт наблюдение, тем точнее становится перечень опасных мест.",
+  leadS:"Все 48 камер района работают одновременно и набирают статистику сами — на карте видно, где опаснее. Откройте любой перекрёсток, чтобы посмотреть, что там происходит: система находит моменты, когда авария почти случилась, и объясняет каждый простым языком.",
   mapTitle:"Центр Ташкента · Мирабадский район",mapSub:"4 камеры",
   mapNote:"Улицы, их классы и названия перекрёстков — реальные данные OpenStreetMap. Движение по ним синтетическое: интенсивность потока, число пешеходов и доля нарушителей — предположения по классу дороги, а не измерения этого района. Рейтинг показывает опасность смоделированного трафика на реальной геометрии, и пока камера не набрала данных, места в перечне у неё нет.",
   narrTitle:"Что сейчас происходит",narrIdle:"Наблюдаю. Пока ничего опасного не происходит.",
+  lgProv:"~ — оценка предварительная, накоплено мало участников",
+  minShort:" мин",lgLow:"спокойно",lgMid:"внимание",lgHigh:"опасно",lgUnit:"конфликтов на 100 участников",
   exportBtn:"Экспорт JSON",nodata:"нет данных",per100:"на 100",arms:"луча",cams:"камер",withData:"с данными",
   pl_simul:"оба оказались в зоне конфликта одновременно",
   pl_pet:"разминулись с разрывом {v} с",
@@ -392,10 +398,12 @@ const I18N = {
 
  uz:{badge:"Simulyatsiya · eksperimental chegaralar",back:"Saytga",
   mSimple:"Oddiy",mExpert:"Ekspert",
-  leadS:"Tuman xaritasidan chorrahani tanlang va kuzating. Tizim avariya sodir bo'lishiga oz qolgan lahzalarni o'zi topadi va har birini oddiy tilda tushuntiradi. Kuzatuv qancha uzoq davom etsa, xavfli joylar ro'yxati shuncha aniq bo'ladi.",
+  leadS:"Tumanning 48 ta kamerasi bir vaqtda ishlaydi va statistikani o'zi to'playdi — xaritada qayer xavfliroq ekani ko'rinadi. Istalgan chorrahani oching: tizim avariya sodir bo'lishiga oz qolgan lahzalarni topadi va oddiy tilda tushuntiradi.",
   mapTitle:"Toshkent markazi · Mirobod tumani",mapSub:"4 kamera",
   mapNote:"Ko'chalar, ularning sinflari va chorraha nomlari — OpenStreetMap'ning haqiqiy ma'lumotlari. Harakat esa sintetik: oqim zichligi, piyodalar soni va qoidabuzarlar ulushi — yo'l sinfi bo'yicha taxminlar, o'lchov emas. Reyting haqiqiy geometriyadagi modellashtirilgan harakat xavfini ko'rsatadi.",
   narrTitle:"Hozir nima bo'lyapti",narrIdle:"Kuzatyapman. Hozircha xavfli hech narsa yo'q.",
+  lgProv:"~ — dastlabki baho, ishtirokchilar kam",
+  minShort:" daq",lgLow:"tinch",lgMid:"diqqat",lgHigh:"xavfli",lgUnit:"100 ishtirokchiga konfliktlar",
   exportBtn:"JSON eksport",nodata:"ma'lumot yo'q",per100:"100 ga",arms:"tarmoq",cams:"kamera",withData:"ma'lumot bilan",
   pl_simul:"ikkalasi bir vaqtda konflikt zonasida bo'ldi",
   pl_pet:"{v} s farq bilan o'tishdi",
@@ -430,10 +438,12 @@ const I18N = {
 
  en:{badge:"Simulation · experimental thresholds",back:"Back to site",
   mSimple:"Simple",mExpert:"Expert",
-  leadS:"Pick a junction on the district map and watch. The system finds the moments where a crash nearly happened and explains each one in plain language. The longer it observes, the sharper the hazard list becomes.",
+  leadS:"All 48 cameras in the district run at once and build their own statistics — the map shows where it is worse. Open any junction to see what happens there: the system finds the moments where a crash nearly happened and explains each in plain language.",
   mapTitle:"Central Tashkent · Mirabad district",mapSub:"4 cameras",
   mapNote:"The streets, their classes and the junction names are real OpenStreetMap data. The traffic on them is synthetic: flow, pedestrian volume and the share of violators are assumptions from road class, not measurements of this district. The ranking shows the danger of simulated traffic on real geometry.",
   narrTitle:"What is happening now",narrIdle:"Watching. Nothing dangerous so far.",
+  lgProv:"~ — provisional, too few road users observed yet",
+  minShort:" min",lgLow:"calm",lgMid:"watch",lgHigh:"dangerous",lgUnit:"conflicts per 100 road users",
   exportBtn:"Export JSON",nodata:"no data",per100:"per 100",arms:"arms",cams:"cameras",withData:"with data",
   pl_simul:"both were inside the conflict zone at the same time",
   pl_pet:"they passed {v} s apart",
@@ -485,8 +495,8 @@ const RULES = {
 /* ----------------------------- geometry ----------------------------- */
 const LANE = 3.5, HALF = 7.0, FAR = 46, CW0 = 8.6, CW1 = 10.2;
 const STOPD = CW1 + 0.9;      // stop line sits before the crossing, as in the real world
-let _seed = 20260818;
-function rnd(){ _seed |= 0; _seed = (_seed + 0x6D2B79F5) | 0;
+function rnd(){ S.seed |= 0; S.seed = (S.seed + 0x6D2B79F5) | 0;
+  let _seed = S.seed;
   let t = Math.imul(_seed ^ (_seed >>> 15), 1 | _seed);
   t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
@@ -579,8 +589,24 @@ const CLS_LABEL = {
   living_street:{ru:"жилая зона",uz:"turar-joy zonasi",en:"living street"},
 };
 
+// A stable hash of the OSM node id. Every junction needs its own traffic
+// realisation and its own random stream: with one shared seed and one set of
+// class defaults, forty-four junctions produce the byte-identical run and the
+// hazard ranking becomes forty-four copies of the same number.
+function hashId(v){
+  let h = 2166136261;
+  const str = String(v);
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
 const SITES = DISTRICT.junctions.map((j, i) => {
   const base = CLS_PARAM[j.cls] || CLS_PARAM.residential;
+  const h = hashId(j.id);
+  // spread in [-1, 1], stable for a given junction
+  const jit = k => (((h >>> (k * 5)) & 255) / 127.5) - 1;
+  // a three-arm junction carries less conflicting traffic than a four-arm one
+  const armF = j.arms >= 5 ? 1.12 : j.arms === 4 ? 1.0 : 0.82;
+  const clamp01 = v => Math.max(0.05, Math.min(0.95, v));
   return {
     id: "J" + j.id,
     code: "CAM-" + String(i + 1).padStart(2, "0"),
@@ -588,8 +614,11 @@ const SITES = DISTRICT.junctions.map((j, i) => {
     cls: j.cls,
     arms: j.arms,
     x: j.x, y: j.y,
-    vlim: j.maxspeed ? Math.max(7, j.maxspeed / 3.6) : base.vlim,
-    traffic: base.traffic, ped: base.ped, risk: base.risk,
+    seed: h,
+    vlim: j.maxspeed ? Math.max(7, j.maxspeed / 3.6) : base.vlim * (1 + jit(0) * 0.10),
+    traffic: clamp01(base.traffic * armF * (1 + jit(1) * 0.30)),
+    ped:     clamp01(base.ped     * (1 + jit(2) * 0.45)),
+    risk:    clamp01(base.risk    * (1 + jit(3) * 0.40)),
     signal: j.signal || base.signal,
   };
 });
@@ -597,16 +626,28 @@ const SITE_STATS = {};
 SITES.forEach(x => SITE_STATS[x.id] = { events:0, passed:0, secs:0, sev:{critical:0,high:0,medium:0,low:0} });
 
 /* ------------------------------ state ------------------------------ */
-const S = {
-  t:0, running:true, speed:1, nextId:1,
-  agents:[], events:[], pairs:new Map(), cells:new Map(),
-  heat:[], spawnCar:0, spawnPed:0,
-  traffic:0.45, ped:0.40, risk:0.25,
-  ttcTh:2.0, petTh:1.5, sepTh:2.0,
-  live:{ttc:null, sep:null, pairA:null, pairB:null}, passed:0,
-  sel:null, stage:0, stageT:0, flash:0, phaseOff:0, queue:[], pending:null, spawnBlock:null,
-  site: SITES[0]
-};
+/* One state object per junction. Every camera runs its own scene: a hazard list
+   that only fills in for the junction you happen to be looking at is not a
+   monitoring system, it is a screensaver. Only the foreground state is drawn. */
+function makeState(site){
+  return {
+    t:0, running:true, speed:1, nextId:1, seed: site.seed | 0,
+    agents:[], events:[], pairs:new Map(), cells:new Map(),
+    heat:[], spawnCar:0, spawnPed:0,
+    traffic:site.traffic, ped:site.ped, risk:site.risk,
+    ttcTh:2.0, petTh:1.5, sepTh:2.0,
+    live:{ttc:null, sep:null, pairA:null, pairB:null}, passed:0,
+    sel:null, stage:0, stageT:0, flash:0, phaseOff:0, queue:[], pending:null, spawnBlock:null,
+    site
+  };
+}
+const STATES = new Map();
+function stateFor(site){
+  if(!STATES.has(site.id)) STATES.set(site.id, makeState(site));
+  return STATES.get(site.id);
+}
+let S = stateFor(SITES[0]);   // the foreground scene; background sites swap in and out
+let FG = S;                   // what the UI is allowed to draw
 /* signal plan with a real all-red clearance interval — without it, traffic that is
    still inside the box meets the cross flow the instant it turns green            */
 const T_G=14, T_Y=3, T_AR=2.5, CYCLE=2*(T_G+T_Y+T_AR);
@@ -1111,7 +1152,7 @@ function scorePair(p){
   if(S.heat.length>45) S.heat.shift();
   if(ev.snap) S.heat.push({x:(ev.snap.ax[0]+ev.snap.bx[0])/2, y:(ev.snap.ax[1]+ev.snap.bx[1])/2, sev});
   S.flash=1; S.stage=6;
-  renderEvents(); pushNarr(ev); renderSites();
+  if(S===FG){ renderEvents(); pushNarr(ev); renderSites(); }
 }
 
 /* ----------------------------- scenarios ----------------------------- */
@@ -1122,6 +1163,7 @@ function closestS(route, target){
   return bs;
 }
 function forcePhase(axisGreen, minLeft){
+  if(!S.site.signal) return;
   // rewind the signal so the requested axis has green with >= minLeft seconds left
   const want = axisGreen==="NS" ? 1.0 : (T_G+T_Y+T_AR+1.0);   // seconds into the cycle
   S.phaseOff = (want - (S.t % CYCLE) + CYCLE) % CYCLE;
@@ -1144,55 +1186,79 @@ function clearApproaches(apps){
   S.spawnBlock = { apps: apps.slice(), until: S.t + 10 };
 }
 function runScenario(name){
-  S.pending=null;
-  if(name==="ped"){
+  S.pending = null;
+  // Scripted scenarios must fire at ANY junction, not only at the one they were
+  // tuned on. Speeds scale with this junction's limit; the red-light scenario is
+  // meaningless where there is no signal and is offered as a give-way failure.
+  const V = S.site.vlim;
+  const sig = S.site.signal;
+
+  if(name === "ped"){
     clearApproaches(["S"]);
     forcePhase("NS", 12);
     const ped = spawnPed({ pts:[[-12,0.6],[13,0.6]], axis:"NS", jay:true, speed:1.42, vmax:1.42 });
-    S.pending = { conf:[LANE,0.6], A:ped, gap:0.62, vB:13.2, make:()=>{
-      const c = spawnCar({ app:"S", man:"straight", violator:true, vmax:13.2, speed:13.2, force:true });
-      c.redRun=true; c.attentive=false;
-      c.override=(x)=>{ const h=nearestPed(x,14,2.6); if(h) return 0; };
+    const CONF = [LANE, 0.6], vB = V * 0.98;
+    S.pending = { conf:CONF, sB:closestS(polyline(buildRoute("S","straight")), CONF),
+                  A:ped, gap:0.5, vB, make:()=>{
+      const c = spawnCar({ app:"S", man:"straight", violator:true, vmax:vB, speed:vB, force:true });
+      c.redRun = true; c.attentive = false;
+      c.override = x => { const h = nearestPed(x, 10 + V * 0.35, 2.6); if(h) return 0; };
       return c; } };
   }
-  else if(name==="left"){
+  else if(name === "left"){
     clearApproaches(["S","N"]);
     forcePhase("NS", 14);
-    const turn = spawnCar({ app:"S", man:"left", violator:true, vmax:9.5, speed:9.5, force:true });
-    turn.attentive=false; turn.redRun=true;
-    const CONF=[-LANE,LANE];
+    const vA = V * 0.70, vB = V * 1.00;
+    const turn = spawnCar({ app:"S", man:"left", violator:true, vmax:vA, speed:vA, force:true });
+    turn.attentive = false; turn.redRun = true;
+    const CONF = [-LANE, LANE];
     S.pending = { conf:CONF, sB:closestS(polyline(buildRoute("N","straight")), CONF),
-                  A:turn, gap:0.45, vB:13.6, make:()=>{
+                  A:turn, gap:0.45, vB, make:()=>{
       // the driver going straight has right of way and no reason to expect the
-      // turn, so their reaction is late — that is the whole anatomy of this crash type
-      const c = spawnCar({ app:"N", man:"straight", violator:true, vmax:13.6, speed:13.6, force:true });
-      c.redRun=true; c.attentive=false; return c; } };
+      // turn, so their reaction is late — the whole anatomy of this crash type
+      const c = spawnCar({ app:"N", man:"straight", violator:true, vmax:vB, speed:vB, force:true });
+      c.redRun = true; c.attentive = false; return c; } };
   }
-  else if(name==="rear"){
+  else if(name === "rear"){
     clearApproaches(["W"]);
     forcePhase("EW", 14);
-    const lead = spawnCar({ app:"W", man:"straight", violator:false, vmax:13.5, speed:13.5, s:20, force:true });
-    lead.redRun=true;
-    lead.override=(x)=>{ if(x.p[0]>-16 && x.p[0]<-4) return 0.5; };
-    const foll = spawnCar({ app:"W", man:"straight", violator:true, vmax:14.5, speed:14.5, s:1, force:true });
-    foll.redRun=true;
-    foll.override=(x)=>{ const d=lead.dead?99:(dist(x.p,lead.p)); return d>13.5 ? x.vmax : 0; };
+    const vL = V * 1.00, vF = V * 1.08;
+    let foll;
+    const lead = spawnCar({ app:"W", man:"straight", violator:false, vmax:vL, speed:vL, s:20, force:true });
+    lead.redRun = true;
+    // Trigger on the follower closing in, not on a fixed stretch of road: at a slow
+    // junction the leader had already driven out of that stretch by the time the
+    // follower arrived, and the scenario silently did nothing.
+    let brakeAt = null;
+    lead.override = x => {
+      if(brakeAt === null && foll && !foll.dead && pairSep(x, foll) < 16) brakeAt = S.t;
+      // one hard braking episode, not a permanent crawl: if both cars simply creep,
+      // the relative speed never rises and nothing is a conflict
+      return (brakeAt !== null && S.t - brakeAt < 3.0) ? 0.5 : undefined;
+    };
+    foll = spawnCar({ app:"W", man:"straight", violator:true, vmax:vF, speed:vF, s:1, force:true });
+    foll.redRun = true;
+    // body-gap, not centre distance, and no dependence on the speed limit:
+    // the follower must end up close at every junction, fast road or slow
+    foll.override = x => { const g = lead.dead ? 99 : pairSep(x, lead);
+                           return g > 6 ? x.vmax : 0; };
   }
-  else if(name==="red"){
+  else if(name === "red"){
     clearApproaches(["W","S"]);
-    forcePhase("NS", 14);
-    const runner = spawnCar({ app:"W", man:"straight", violator:true, vmax:14.2, speed:14.2, force:true });
-    runner.redRun=true; runner.attentive=false;
-    const CONF=[LANE,-LANE];
+    if(sig) forcePhase("NS", 14);
+    const vA = V * 1.05, vB = V * 0.93;
+    const runner = spawnCar({ app:"W", man:"straight", violator:true, vmax:vA, speed:vA, force:true });
+    runner.redRun = true; runner.attentive = false;
+    const CONF = [LANE, -LANE];
     S.pending = { conf:CONF, sB:closestS(polyline(buildRoute("S","straight")), CONF),
-                  A:runner, gap:0.38, vB:12.6, make:()=>{
-      // the driver with the green has no reason to expect cross traffic, so their
-      // effective reaction is late — that is precisely why red-light running hurts
-      const c = spawnCar({ app:"S", man:"straight", violator:true, vmax:12.6, speed:12.6, force:true });
-      c.attentive=false;
-      c.redRun=true; return c; } };
+                  A:runner, gap:0.38, vB, make:()=>{
+      // the driver on the green has no reason to expect cross traffic, so the
+      // reaction comes late — precisely why running a red hurts
+      const c = spawnCar({ app:"S", man:"straight", violator:true, vmax:vB, speed:vB, force:true });
+      c.attentive = false; c.redRun = true; return c; } };
   }
 }
+
 function tickPending(){
   const P=S.pending; if(!P) return;
   if(P.A.dead){ S.pending=null; return; }
@@ -1250,16 +1316,19 @@ function step(){
 }
 function switchSite(id){
   const site = SITES.find(x=>x.id===id); if(!site || site===S.site) return;
-  S.site = site;
-  S.traffic = site.traffic; S.ped = site.ped; S.risk = site.risk;
+  // The scene we are leaving keeps running in the background; the one we open
+  // resumes where it was rather than starting from an empty street.
+  S = FG = stateFor(site);
   ["rTraffic","rPed","rRisk"].forEach(k=>{
     const el=$(k); if(!el) return;
-    el.value = Math.round((k==="rTraffic"?site.traffic:k==="rPed"?site.ped:site.risk)*100);
+    el.value = Math.round((k==="rTraffic"?S.traffic:k==="rPed"?S.ped:S.risk)*100);
     el.dispatchEvent(new Event("input"));
   });
-  resetSim();
-  renderSites();
+  S.sel=null;
+  document.getElementById("detail").style.display="none";
+  resetNarr(); renderEvents(); renderSites(); paintHeat();
 }
+
 /* Agents are integrated one after another, so A can commit a move into a body that
    has not been updated yet; that body then has nowhere to revert to. A short
    separation pass after the whole step guarantees no vehicle is ever drawn inside
@@ -1301,7 +1370,7 @@ function resolveOverlaps(){
 }
 
 function resetSim(){
-  _seed=20260818;
+  S.seed = S.site.seed | 0;
   S.t=0; S.agents=[]; S.events=[]; S.pairs=new Map(); S.cells=new Map(); S.heat=[];
   S.passed=0; S.nextId=1; S.spawnCar=0; S.spawnBlock=null; S.spawnPed=0.6; S.sel=null; S.pending=null; S.phaseOff=0;
   heatCv.getContext("2d").clearRect(0,0,heatCv.width,heatCv.height);
@@ -1746,10 +1815,21 @@ function applyLang(){
 }
 
 /* --------------------------- district map --------------------------- */
-const RATE_AMBER = 28, RATE_RED = 38;
-function siteRate(id){ const st=SITE_STATS[id]; return st.passed>=12 ? 100*st.events/st.passed : null; }
+const RATE_AMBER = 32, RATE_RED = 46;
+// A rate computed on a dozen road users is noise wearing a number's clothes.
+// Below MIN_EXPOSURE we show nothing; below FIRM_EXPOSURE we mark it provisional.
+const MIN_EXPOSURE = 25, FIRM_EXPOSURE = 60;
+function siteRate(id){ const st=SITE_STATS[id]; return st.passed>=MIN_EXPOSURE ? 100*st.events/st.passed : null; }
+function siteFirm(id){ return SITE_STATS[id].passed >= FIRM_EXPOSURE; }
 function rateColor(r){ return r===null ? "#4b4b56" : (r>=RATE_RED ? "#ef4444" : r>=RATE_AMBER ? "#f59e0b" : "#34d399"); }
 function siteName(x){ return x.label; }
+function shortLabel(label){
+  // "Amir Temur 2-o'tish ko'chasi × Parkent ko'chasi" -> "Amir Temur × Parkent"
+  return label.split("×")
+    .map(part => part.replace(/ko'chasi|ko‘chasi|yo'li|yo‘li|shoh|улица|проезд|переулок/gi, "")
+                     .replace(/\s+/g, " ").trim())
+    .filter(Boolean).join(" × ").slice(0, 34);
+}
 function siteSub(x){ const l=CLS_LABEL[x.cls]; return (l ? (l[LANG]||l.ru) : x.cls) + " · " + x.arms + " " + T("arms"); }
 
 // Stroke weight and colour per road class, in DISTRICT.road_classes order.
@@ -1810,6 +1890,23 @@ function drawMap(){
     if(r===null){ ctx.strokeStyle="rgba(140,140,155,.6)"; ctx.lineWidth=.8;
       ctx.beginPath(); ctx.arc(X,Y,rad,0,7); ctx.stroke(); }
   }
+  // Name the worst three. A map of coloured dots tells you something is wrong
+  // somewhere; a road engineer needs to know which street to drive to.
+  const worst = SITES.filter(x=>siteRate(x.id)!==null)
+                     .sort((a,b)=>siteRate(b.id)-siteRate(a.id)).slice(0,3);
+  ctx.font="700 9.5px Inter,sans-serif"; ctx.textAlign="center";
+  worst.forEach((site,i)=>{
+    const X=mx(site.x), Y=my(site.y);
+    const txt = shortLabel(site.label);
+    const w = ctx.measureText(txt).width + 8;
+    let lx = Math.min(Math.max(X, w/2+2), MP.w-w/2-2);
+    let ly = Y - 12; if(ly < 12) ly = Y + 18;
+    ctx.fillStyle="rgba(10,10,12,.82)";
+    ctx.fillRect(lx-w/2, ly-9, w, 12);
+    ctx.fillStyle = rateColor(siteRate(site.id));
+    ctx.fillText(txt, lx, ly);
+  });
+  ctx.textAlign="left";
   // scale bar: a map without one invites people to guess distances
   const km = 1000*MP.sc;
   ctx.strokeStyle="rgba(255,255,255,.32)"; ctx.lineWidth=1.2;
@@ -1825,22 +1922,35 @@ function renderSites(){
   mapResize(); drawMap();
   const attr=$("mapAttr");
   if(attr) attr.textContent = "© OpenStreetMap contributors, ODbL";
-  const withData = SITES.filter(x=>siteRate(x.id)!==null)
-                        .sort((a,b)=>siteRate(b.id)-siteRate(a.id));
-  const rest = SITES.filter(x=>siteRate(x.id)===null);
-  const shown = withData.slice(0,8);
-  if(!shown.some(x=>x===S.site)) shown.push(S.site);
-  const rows = shown.concat(rest.filter(x=>x!==S.site).slice(0, Math.max(0, 9-shown.length)));
+  const ranked = SITES.slice().sort((a,b)=>{
+    const ra=siteRate(a.id), rb=siteRate(b.id);
+    if(ra===null && rb===null) return 0;
+    if(ra===null) return 1;
+    if(rb===null) return -1;
+    return rb-ra;
+  });
+  const withData = ranked.filter(x=>siteRate(x.id)!==null);
+  const rows = ranked.slice(0, 10);
+  if(!rows.includes(S.site)) rows[rows.length-1] = S.site;
   $("rank").innerHTML = rows.map((x,i)=>{
     const r=siteRate(x.id), col=rateColor(r), act=x===S.site;
+    const mins = SITE_STATS[x.id].secs/60;
     return `<div class="rk ${act?'on':''}" data-site="${x.id}" title="${siteSub(x)}">
       <span class="no">${r===null?'—':(i+1)}</span>
       <span class="dot" style="background:${col}"></span>
       <span class="nm">${siteName(x)}</span>
+      <span class="obs">${mins<0.1?'':mins.toFixed(0)+T("minShort")}</span>
       <span class="val ${r===null?'nd':''}" style="${r===null?'':'color:'+col}">
-        ${r===null?T("nodata"):r.toFixed(0)+" / "+T("per100")}</span></div>`;
+        ${r===null?T("nodata"):(siteFirm(x.id)?"":"~")+r.toFixed(0)+" / "+T("per100")}</span></div>`;
   }).join("");
   $("rank").querySelectorAll(".rk").forEach(el=>el.onclick=()=>switchSite(el.dataset.site));
+  const lg=$("legend");
+  if(lg) lg.innerHTML =
+    `<span><i style="background:#34d399"></i>${T("lgLow")} &lt; ${RATE_AMBER}</span>` +
+    `<span><i style="background:#f59e0b"></i>${T("lgMid")} ${RATE_AMBER}–${RATE_RED}</span>` +
+    `<span><i style="background:#ef4444"></i>${T("lgHigh")} &gt; ${RATE_RED}</span>` +
+    `<span style="margin-left:auto">${T("lgUnit")}</span>` +
+    `<span style="flex-basis:100%;color:#5f5f6b">${T("lgProv")}</span>`;
   const tag=$("camTag"); if(tag) tag.textContent=S.site.code;
   const sub=$("mapSubEl");
   if(sub) sub.textContent = SITES.length + " " + T("cams") + " · " + withData.length + " " + T("withData");
@@ -1962,6 +2072,30 @@ document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>{
 });
 
 /* ------------------------------ loop ------------------------------ */
+/* --------- background: every other camera keeps watching its junction ---------
+   A monitoring system whose hazard list only fills in for the junction you are
+   looking at would be theatre. The other 47 scenes run the same engine, without
+   rendering, on a per-frame time budget so the visible one never stutters.     */
+let bgCursor = 0;
+const BG_BURST = 4, PAGE_T0 = performance.now();
+// The first half-minute gets a bigger slice so the district map fills in while
+// someone is still reading the intro; after that it settles down and leaves the
+// frame budget to the scene being watched.
+function bgBudgetMs(){ return performance.now() - PAGE_T0 < 30000 ? 9.0 : 4.0; }
+function stepBackground(){
+  if(!FG.running || SITES.length < 2) return;
+  const fg = S, t0 = performance.now(), budget = bgBudgetMs();
+  let visited = 0;
+  while(performance.now() - t0 < budget && visited < SITES.length){
+    const site = SITES[bgCursor++ % SITES.length];
+    if(site === fg.site) continue;
+    S = stateFor(site);
+    for(let k = 0; k < BG_BURST; k++) step();
+    visited++;
+  }
+  S = fg;
+}
+
 let acc=0, last=performance.now(), heatT=0, siteT=0;
 function frame(now){
   const real=Math.min((now-last)/1000, 0.1); last=now;
@@ -1970,6 +2104,7 @@ function frame(now){
     let n=0;
     while(acc>=DT && n<12){ step(); acc-=DT; n++; }
     heatT+=real; if(heatT>0.5){ heatT=0; paintHeat(); }
+    stepBackground();
     siteT+=real; if(siteT>2.5){ siteT=0; renderSites(); }
   }
   drawCam(); drawGnd(); renderMetrics();
